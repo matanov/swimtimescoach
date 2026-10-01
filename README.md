@@ -40,6 +40,10 @@ in your browser with everything built in: it works offline, needs no install,
 and keeps the same privacy protections. It doesn't update itself, so download
 it again now and then for new features.
 
+Want to try it first? Download the five `.cl2` files in
+[`docs/sample-data/`](docs/sample-data) (a made-up team, safe to share) and
+add them to the app.
+
 To work on the code, open `index.html` in a browser or start a local server:
 
 ```sh
@@ -73,6 +77,16 @@ Two views, switched with **Columns** above the table:
 |---|---|
 | **By course** | Each course gets its own columns: short course yards, short course meters, long course meters. |
 | **By event (SC + LC)** | One column per event. Each cell stacks the short-course best over the long-course best, with Hy-Tek's course letters: **Y** yards, **S** short course meters, **L** long course meters, e.g. `35.31S` over `34.06L`. **—SC** or **—LC** means no swim in that course; a blank cell means no swims at all. |
+
+**By course**: each course in its own block of columns.
+
+![Best-times table, By course view: short course meters and long course meters columns for six swimmers](docs/images/view-by-course.png)
+
+**By event (SC + LC)**: short course over long course in one column per event.
+
+![Best-times table, By event view: each cell stacks the short course meters time over the long course meters time](docs/images/view-by-event.png)
+
+*Screenshots use the made-up sample team in [`docs/sample-data/`](docs/sample-data).*
 
 Yards and meters times are never compared, so each course keeps its own best.
 500/1000/1650 yards free share a column with 400/800/1500 meters, and the
@@ -142,6 +156,8 @@ other sites, and don't store result data in the browser.
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
 | `tests/` | Node tests and synthetic fixtures |
 | `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
+| `tools/make_sample_data.py` | Generates the made-up sample meets in `docs/sample-data/` (README screenshots, try-it files) |
+| `docs/images/` | README screenshots |
 | `tools/build-share.js` | Builds the one-file app: the **Share as file** template and the downloadable `swimtimescoach.html` |
 | `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
 

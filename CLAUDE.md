@@ -43,6 +43,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - A shared file must contain only the selected swimmers: data goes through `trimToSwimmers`, and `shareFile` re-renders before copying the static table and swim list.
 
 ## Docs
+- README screenshots (`docs/images/`) show only the synthetic team from `python3 tools/make_sample_data.py` (`docs/sample-data/`), never real or anonymized-real data: anonymized files keep real times, which can be matched to public results.
 - The in-app help (`#help` dialog in `index.html`) and the README user guide say the same things; update both when behavior changes.
 
 ## Testing changes
