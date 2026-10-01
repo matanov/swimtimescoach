@@ -136,10 +136,12 @@ test("event view pairs yards and meters freestyle distances", () => {
   assert.equal(CL2.pairedDist(sw(400, "1", "LCM")), 400);
   assert.equal(CL2.pairedDist(sw(400, "5", "SCY")), 400);   // 400 IM is the same in every course
   assert.equal(CL2.pairedDist(sw(50, "1", "SCY")), 50);
-  assert.equal(CL2.pairedLabel(400, "1"), "400/500 Free");
-  assert.equal(CL2.pairedLabel(1500, "1"), "1500/1650 Free");
-  assert.equal(CL2.pairedLabel(400, "5"), "400 IM");
-  assert.equal(CL2.pairedLabel(100, "4"), "100 Fly");
+  assert.equal(CL2.columnLabel([400, 500, 400], "1"), "400/500 Free");
+  assert.equal(CL2.columnLabel([1650, 1500], "1"), "1500/1650 Free");
+  assert.equal(CL2.columnLabel([400], "1"), "400 Free");   // meters-only team: no "/500"
+  assert.equal(CL2.columnLabel([500], "1"), "500 Free");   // yards only
+  assert.equal(CL2.columnLabel([400], "5"), "400 IM");
+  assert.equal(CL2.columnLabel([100], "4"), "100 Fly");
 });
 
 test("event view keeps a best per course, never comparing yards with meters", () => {
@@ -162,4 +164,10 @@ test("a course with only a DQ has an entry but no best", () => {
   assert.equal(short[0].best, null);
   assert.equal(short[0].swims[0].time.dq, true);
   assert.deepEqual(long, []);
+});
+
+test("meet names that differ only by a number are different names", () => {
+  const ms = CL2.labelMeets([{ name: "Fall Meet 1", start: "2025-09-06", file: "a" },
+    { name: "Fall Meet 10", start: "2025-09-13", file: "b" }, { name: "Winter Open 2025", file: "c" }, { name: "Winter Open 2026", file: "d" }]);
+  assert.deepEqual(ms.map(m => m.label), ["Fall Meet 1", "Fall Meet 10", "Winter Open 2025", "Winter Open 2026"]);
 });

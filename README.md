@@ -25,7 +25,8 @@ with Hy-Tek's course letters (`24.51Y`, `26.40S`, `27.80L`). A course with
 no swims shows `—SC` or `—LC`; an event with no swims at all is blank.
 Yards and meters times are never compared, so a swimmer with both SCY and
 SCM swims gets both. 500/1000/1650 yards free share a column with
-400/800/1500 meters. Click any cell for every swim in that event, best
+400/800/1500 meters; the header names only the distances actually swum
+("400 Free" for a meters-only team, "400/500 Free" when both appear). Click any cell for every swim in that event, best
 marked per course. Print and CSV follow the current view.
 
 ### Saving your work

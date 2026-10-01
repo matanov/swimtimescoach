@@ -2,7 +2,7 @@
 (() => {
 "use strict";
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets,
-        pairedDist, pairedLabel, courseBests, STROKES, COURSE_ORDER } = window.CL2;
+        pairedDist, columnLabel, courseBests, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -113,12 +113,13 @@ function buildGrid(){
     if (!keys.has(s.pkey)) continue;
     const course = byEvent ? null : s.course, dist = byEvent ? pairedDist(s) : s.dist;
     const ek = `${course || "all"}|${s.stroke}|${String(dist).padStart(4,"0")}`;
-    if (!events.has(ek)) events.set(ek, {course, stroke:s.stroke, dist, by:new Map(),
-      label: byEvent ? pairedLabel(dist, s.stroke) : eventLabel(dist, s.stroke)});
+    if (!events.has(ek)) events.set(ek, {course, stroke:s.stroke, dist, by:new Map(), dists:new Set()});
     const e = events.get(ek);
+    e.dists.add(s.dist);
     if (!e.by.has(s.pkey)) e.by.set(s.pkey, []);
     e.by.get(s.pkey).push(s);
   }
+  for (const e of events.values()) e.label = columnLabel(e.dists, e.stroke);
   const sorted = [...events.entries()].sort(([,a],[,b]) =>
     (COURSE_ORDER[a.course]||9) - (COURSE_ORDER[b.course]||9) ||
     a.stroke - b.stroke || a.dist - b.dist);

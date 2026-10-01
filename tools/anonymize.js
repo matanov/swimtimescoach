@@ -219,18 +219,21 @@ function anonymizeText(text, map, ourTeam, stats){
   return { text: out.join(eol), meet, start };
 }
 
-// inputs: [{name, text}] -> outputs: [{name, text, from}]. Mutates map.
+// inputs: [{name, text}] -> outputs: [{name, text, input, meetName}]. Mutates map.
+// Files are taken in meet-date order so new fake meets are numbered chronologically.
 function anonymizeAll(inputs, map, { ourTeam } = {}){
   const stats = { dropped: {} };
   const used = new Set(), outputs = [];
-  for (const input of inputs) {
+  const startOf = t => CL2.sdifDate(f((t.match(/^B1.*$/m)?.[0] || "").padEnd(160), 122, 8)) || "";
+  const ordered = inputs.map(i => ({ i, start: startOf(i.text) })).sort((a, b) => a.start.localeCompare(b.start)).map(x => x.i);
+  for (const input of ordered) {
     const r = anonymizeText(input.text, map, ourTeam, stats);
     const ext = /\.sd3$/i.test(input.name) ? ".sd3" : ".cl2";
     const base = `${CL2.sdifDate(r.start) || "undated"}-${(r.meet?.name || "meet").toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
     let name = base + ext;
     for (let i = 2; used.has(name); i++) name = `${base}-${i}${ext}`;
     used.add(name);
-    outputs.push({ name, text: r.text, from: input.name, meetName: r.meet?.name });
+    outputs.push({ name, text: r.text, input, meetName: r.meet?.name });
   }
   const swimmers = Object.values(map.swimmers);
   stats.newSwimmers = swimmers.filter(s => s.isNew).length;
@@ -263,11 +266,12 @@ function leakCheck(outputs, map){
 
 // Parses originals and outputs with the app's parser; every swim must match
 // once real names and teams are swapped for their fakes.
-function equivalenceCheck(inputs, outputs, map){
+function equivalenceCheck(outputs, map){
   let swims = 0;
   const problems = [];
-  inputs.forEach((input, i) => {
-    const a = CL2.parseCL2(input.text, input.name), b = CL2.parseCL2(outputs[i].text, outputs[i].name);
+  outputs.forEach((out, i) => {
+    const input = out.input;
+    const a = CL2.parseCL2(input.text, input.name), b = CL2.parseCL2(out.text, out.name);
     if (a.meet.start !== b.meet.start || a.meet.course !== b.meet.course || (outputs[i].meetName || "") !== b.meet.name)
       problems.push(`${outputs[i].name}: meet header differs`);
     const row = (s, name, team, pref) => [name, team, s.dist, s.stroke, s.eventNo, s.round, s.course, s.time.raw,
@@ -345,7 +349,7 @@ async function main(argv){
 
   const { outputs, stats } = anonymizeAll(inputs, map, { ourTeam });
   const leaks = leakCheck(outputs, map);
-  const eq = equivalenceCheck(inputs, outputs, map);
+  const eq = equivalenceCheck(outputs, map);
   if (leaks.hits.length) {
     const kinds = [...new Set(leaks.hits.map(h => h.kind))].join(", ");
     throw new Error(`leak check failed: ${leaks.hits.length} hit(s) (${kinds}); nothing written`);

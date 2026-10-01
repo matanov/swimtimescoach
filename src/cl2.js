@@ -134,7 +134,8 @@ function assignPeople(swims){
 function labelMeets(meets){
   const groups = new Map();
   for (const m of meets) {
-    const k = norm(m.name || m.file);
+    // unlike norm(), keeps digits: "Meet 1" and "Meet 2" are different names
+    const k = (m.name || m.file).toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push(m);
   }
@@ -157,12 +158,12 @@ function labelMeets(meets){
    One column per event across all courses. Free distances that differ
    between yards and meters share a column (500Y with 400M, ...). */
 const YARDS_TO_METERS = {500:400, 1000:800, 1650:1500};
-const METERS_TO_YARDS = {400:500, 800:1000, 1500:1650};
 const COURSE_LETTER = {SCY:"Y", SCM:"S", LCM:"L", "?":"?"};   // Hy-Tek's suffixes
 
 const pairedDist = s => (s.stroke === "1" && s.course === "SCY" && YARDS_TO_METERS[s.dist]) || s.dist;
-const pairedLabel = (dist, stroke) =>
-  `${stroke === "1" && METERS_TO_YARDS[dist] ? `${dist}/${METERS_TO_YARDS[dist]}` : dist} ${STROKES[stroke]}`;
+// Named after the distances actually swum in the column: "400 Free" for a
+// meters-only team, "500 Free" for yards only, "400/500 Free" for both.
+const columnLabel = (dists, stroke) => `${[...new Set(dists)].sort((a,b) => a - b).join("/")} ${STROKES[stroke]}`;
 
 // Yards and meters times can't be compared, so each course keeps its own best:
 // short = SCY, SCM, unknown (in that order); long = LCM. best is null when
@@ -179,7 +180,7 @@ function courseBests(list){
 
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              pairedDist, pairedLabel, courseBests,
+              pairedDist, columnLabel, courseBests,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

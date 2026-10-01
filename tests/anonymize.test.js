@@ -23,11 +23,11 @@ test("no real name, ID, team, meet or city survives, in contents or file names",
 });
 
 test("built-in leak and equivalence checks pass", () => {
-  const { outputs, map, ins } = run();
+  const { outputs, map } = run();
   const leaks = A.leakCheck(outputs, map);
   assert.deepEqual(leaks.hits, []);
   assert.ok(leaks.checked > 20);
-  const eq = A.equivalenceCheck(ins, outputs, map);
+  const eq = A.equivalenceCheck(outputs, map);
   assert.deepEqual(eq.problems, []);
   assert.equal(eq.swims, 14);
 });
@@ -39,6 +39,12 @@ test("leak check catches a real name that slipped through", () => {
   assert.deepEqual([...new Set(A.leakCheck(outputs, map).hits.map(h => h.kind))].sort(), ["first name", "last name", "preferred name", "swimmer name"]);
 });
 
+test("fake meets are numbered in date order, whatever the file order", () => {
+  const { outputs } = run(A.emptyMap(), inputs().reverse());
+  assert.deepEqual(outputs.map(o => o.name),
+    ["2024-10-06-fall-meet-1.cl2", "2025-07-15-summer-meet-1.cl2", "2025-10-05-fall-meet-2.cl2", "2025-12-12-winter-meet-1.cl2"]);
+});
+
 test("records keep their fixed-width layout", () => {
   for (const o of run().outputs) for (const l of o.text.split("\r\n").filter(Boolean)) assert.ok(l.length <= 160);
 });
@@ -46,6 +52,7 @@ test("records keep their fixed-width layout", () => {
 test("a swimmer gets the same fake name in every file, and results are unchanged", () => {
   const { outputs } = run();
   const parsed = outputs.map(o => CL2.parseCL2(o.text, o.name));
+  assert.deepEqual(outputs.map(o => o.input.name).sort(), [...NAMES].sort());
   const swims = parsed.flatMap(p => p.swims);
   const people = CL2.assignPeople(swims);
   assert.equal(people.size, 2);
@@ -58,7 +65,7 @@ test("a swimmer gets the same fake name in every file, and results are unchanged
 
 test("names are mixed movie stars, matched to sex, never a real star's full name", () => {
   const { outputs, map } = run();
-  const s = CL2.parseCL2(outputs[1].text, "x").swims;
+  const s = CL2.parseCL2(outputs.find(o => o.input.name === "fall-invite.cl2").text, "x").swims;
   const sofia = Object.values(map.swimmers).find(x => x.real.last === "Bianchi");
   assert.ok(s.some(x => x.swimmer.first === sofia.first && x.swimmer.sex === "F"));
   for (const x of Object.values(map.swimmers)) assert.notEqual(`${x.first} ${x.last}`, "Tom Hanks");
