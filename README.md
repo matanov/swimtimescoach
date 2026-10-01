@@ -30,8 +30,10 @@ browser and never reach the host.
 
 ## Getting started
 
-No install needed. Either open `index.html` in a browser, or run it from a
-local server:
+Use it online at **https://matanov.github.io/swimtimescoach/**. Nothing to
+install, and your files are still read only in your browser.
+
+Or run your own copy: open `index.html` in a browser, or start a local server:
 
 ```sh
 npm run serve        # http://localhost:8000, reachable from this computer only
@@ -98,6 +100,9 @@ npm test                      # all tests, Node 18+, no dependencies
 python3 tests/gen_fixtures.py # regenerate synthetic fixtures
 npm run serve                 # local server on 127.0.0.1:8000
 ```
+
+Every push to `main` runs the tests and, if they pass, publishes `index.html`,
+`src/` and `vendor/` to GitHub Pages (`.github/workflows/pages.yml`).
 
 Privacy rules for changes: keep the Content Security Policy in `index.html`
 as strict as it is (in particular `connect-src 'none'`), load nothing from
