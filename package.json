@@ -1,0 +1,10 @@
+{
+  "name": "cl2-best-times",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-only best-times table from Hy-Tek .cl2 / SDIF v3 swim results",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
