@@ -161,6 +161,8 @@ other sites, and don't store result data in the browser.
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
 | `tests/` | Node tests and synthetic fixtures |
 | `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
+| `standards/efsl-2025-2028.json` | EFSL championship qualification times 2025–2028 (Long and Short Distance Champs, SCM and LCM), for an upcoming "qualifying times" feature |
+| `tools/make_efsl_standards.py` | Builds that file from the times as printed in EFSL's PDF, checking each row against the table layout |
 | `tools/make_sample_data.py` | Generates the made-up sample meets in `docs/sample-data/` (README screenshots, try-it files) |
 | `docs/images/` | README screenshots |
 | `tools/build-share.js` | Builds the one-file app: the **Share as file** template and the downloadable `swimtimescoach.html` |
