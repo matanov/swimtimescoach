@@ -145,6 +145,20 @@ other sites, and don't store result data in the browser.
 | `tools/build-share.js` | Builds the one-file app: the **Share as file** template and the downloadable `swimtimescoach.html` |
 | `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
 
+### License
+
+[MIT](LICENSE), Copyright (c) 2026 Panteley Matanov: free to use, copy, change
+and share, including commercially, as long as the copyright notice comes along.
+
+Bundled third-party code and fonts keep their own licenses:
+
+| Component | License |
+|---|---|
+| [JSZip](https://stuk.github.io/jszip/) 3.10.1 (`vendor/jszip.min.js`) | MIT (or GPLv3), notice kept in the file |
+| [Barlow](https://github.com/jpt/barlow) fonts (`vendor/fonts/`) | SIL Open Font License 1.1, see `vendor/fonts/OFL.txt` |
+
+The downloadable app and shared files carry the same notices in their `<head>`.
+
 ### Testing with real meet files
 
 Real results contain children's names, birth dates and IDs, so they are

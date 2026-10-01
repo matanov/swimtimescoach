@@ -21,7 +21,10 @@ test("shared page loads nothing from outside and allows only its own scripts", (
     assert.ok(csp.includes(`'sha256-${hash}'`), "inline script not allowed by the CSP hash list");
   }
   assert.equal((csp.match(/'sha256-/g) || []).length, 4);
-  assert.doesNotMatch(html, /\b(src|href)="(?!data:)[^"#]/);
+  assert.doesNotMatch(html, /\bsrc="(?!data:)/);                 // nothing loaded from outside
+  assert.doesNotMatch(html, /<link\b/);
+  assert.doesNotMatch(html, /\bhref="(?!https:\/\/|#)/);           // only plain web links
+  assert.match(html, /MIT License, Copyright \(c\) 2026 Panteley Matanov/);  // license notice travels along
   assert.doesNotMatch(html, /url\("\.\./);
 });
 

@@ -8,5 +8,7 @@
     "serve": "python3 -m http.server 8000 --bind 127.0.0.1",
     "anonymize": "node tools/anonymize.js",
     "build-share": "node tools/build-share.js"
-  }
+  },
+  "license": "MIT",
+  "author": "Panteley Matanov"
 }

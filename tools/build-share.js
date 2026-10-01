@@ -70,7 +70,9 @@ function buildTemplate(){
     const data = i === 0 ? '<script type="text/plain" id="sharedSession"><!--SHARE:data--></script>\n' : "";
     html = replaceOnce(html, `<script src="${p}"></script>`, `${data}<script>${scripts[i]}</script>`);
   });
-  if (/\b(src|href)="(?!data:)[^"#]/.test(html)) throw new Error("build-share: template still references an outside file");
+  // nothing may be loaded from outside the file; plain https links (license, code) are fine
+  if (/\bsrc="(?!data:)/.test(html) || /<link\b/.test(html) || /<(?!a\b)\w+[^>]*\bhref=/.test(html) || /\bhref="(?!https:\/\/|#)/.test(html))
+    throw new Error("build-share: template still references an outside file");
   return html;
 }
 
