@@ -128,3 +128,38 @@ test("same-name swimmers with different USS IDs are split", () => {
   assert.equal(people.size, 2);
   assert.deepEqual([...people.values()].map(p => p.count), [2, 1]);
 });
+
+test("event view pairs yards and meters freestyle distances", () => {
+  const sw = (dist, stroke, course) => ({ dist, stroke, course });
+  assert.equal(CL2.pairedDist(sw(500, "1", "SCY")), 400);
+  assert.equal(CL2.pairedDist(sw(1650, "1", "SCY")), 1500);
+  assert.equal(CL2.pairedDist(sw(400, "1", "LCM")), 400);
+  assert.equal(CL2.pairedDist(sw(400, "5", "SCY")), 400);   // 400 IM is the same in every course
+  assert.equal(CL2.pairedDist(sw(50, "1", "SCY")), 50);
+  assert.equal(CL2.pairedLabel(400, "1"), "400/500 Free");
+  assert.equal(CL2.pairedLabel(1500, "1"), "1500/1650 Free");
+  assert.equal(CL2.pairedLabel(400, "5"), "400 IM");
+  assert.equal(CL2.pairedLabel(100, "4"), "100 Fly");
+});
+
+test("event view keeps a best per course, never comparing yards with meters", () => {
+  const swims = ["fall-invite-2024.cl2", "fall-invite.cl2", "winter-champs.cl2", "summer-lc.cl2"]
+    .flatMap(n => load(n).swims).filter(s => s.swimmer.last === "Rossi");
+  const cell = (dist, stroke) => {
+    const { short, long } = CL2.courseBests(swims.filter(s => s.stroke === stroke && CL2.pairedDist(s) === dist));
+    const show = xs => xs.map(x => (x.best ? CL2.fmt(x.best.time.cs) : "") + x.letter);
+    return [show(short), show(long)];
+  };
+  assert.deepEqual(cell(50, "1"), [["24.51Y", "26.40S"], ["27.80L"]]);
+  assert.deepEqual(cell(400, "1"), [["4:52.10Y"], ["4:31.00L"]]);   // 500Y and 400L share a column
+  assert.deepEqual(cell(100, "4"), [["1:01.22Y"], []]);             // no long course swim
+});
+
+test("a course with only a DQ has an entry but no best", () => {
+  const { swims } = load("fall-invite.cl2");
+  const { short, long } = CL2.courseBests(swims.filter(s => s.swimmer.last === "Bianchi" && s.dist === 50));
+  assert.equal(short.length, 1);
+  assert.equal(short[0].best, null);
+  assert.equal(short[0].swims[0].time.dq, true);
+  assert.deepEqual(long, []);
+});

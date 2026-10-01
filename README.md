@@ -16,6 +16,18 @@ npm run serve        # python3 -m http.server 8000 → http://localhost:8000
 
 Then add `.cl2`, `.sd3`, or Hy-Tek results `.zip` files (drag and drop works).
 
+### Views
+
+**By course** (default) has a column per event per course, grouped under
+SCY, SCM and LCM. **By event (SC + LC)** has one column per event; each cell
+stacks the swimmer's short-course best over their long-course best, marked
+with Hy-Tek's course letters (`24.51Y`, `26.40S`, `27.80L`). A course with
+no swims shows `—SC` or `—LC`; an event with no swims at all is blank.
+Yards and meters times are never compared, so a swimmer with both SCY and
+SCM swims gets both. 500/1000/1650 yards free share a column with
+400/800/1500 meters. Click any cell for every swim in that event, best
+marked per course. Print and CSV follow the current view.
+
 ### Saving your work
 
 **Save session** downloads one `.zip` with every loaded meet file plus your

@@ -13,9 +13,9 @@ def rec(code,fields):
     return l[:160]
 def d0(name,uss,age,sex,dist,stroke,ev,date,prelim,pc,final,fc,pp,fp,swimoff='',sc=''):
     return rec('D0',[(3,1,'1'),(12,28,name),(40,12,uss),(56,8,'00000000'),(64,2,age),(66,1,sex),(67,1,sex),(68,4,dist,1),(72,1,stroke),(73,4,ev,1),(77,4,'UNOV'),(81,8,date),(98,8,prelim,1),(106,1,pc),(107,8,swimoff,1),(115,1,sc),(116,8,final,1),(124,1,fc),(133,3,pp,1),(136,3,fp,1)])
-def meet(name,date,team,rows):
+def meet(name,date,team,rows,course='Y'):
     L=[rec('A0',[(12,2,'02'),(44,20,'Hy-Tek, Ltd')]),
-       rec('B1',[(12,30,name),(86,20,'Vicenza'),(122,8,date),(130,8,date),(150,1,'Y')]),
+       rec('B1',[(12,30,name),(86,20,'Vicenza'),(122,8,date),(130,8,date),(150,1,course)]),
        rec('C1',[(12,6,team),(18,30,'Test Aquatics')])]
     L+=rows+[rec('Z0',[])]
     return '\r\n'.join(L)+'\r\n'
@@ -33,10 +33,17 @@ b=meet('Winter Champs','12122025','ITTEST',[
  d0('Rossi, Marco A','A1','14','M','50','1','3','12122025','','', '24.51','Y','','1'),
  rec('D3',[(3,14,'010111MARAROSS'),(17,15,'Marco')]),
  d0('Bianchi, Sofia','B1','13','F','50','1','4','12122025','','', '29.10','Y','','5'),
+ d0('Rossi, Marco A','A1','14','M','500','1','9','12122025','','', '4:52.10','Y','','2'),
 ])
 # same meet name as `a`, a year earlier: must stay a separate meet
 c=meet('Fall Invite','10062024','ITTEST',[
  d0('Rossi, Marco A','A1','13','M','50','1','1','10062024','','', '26.10','Y','','4'),
 ])
-for fn,txt in [('fall-invite.cl2',a),('winter-champs.cl2',b),('fall-invite-2024.cl2',c)]:
+# long course meet; one swim timed short course meters (per-time course code)
+d=meet('Summer LC','07152025','ITTEST',[
+ d0('Rossi, Marco A','A1','14','M','50','1','1','07152025','','', '27.80','L','','3'),
+ d0('Rossi, Marco A','A1','14','M','400','1','2','07152025','','', '4:31.00','L','','1'),
+ d0('Rossi, Marco A','A1','14','M','50','1','3','07162025','','', '26.40','S','','2'),
+],course='L')
+for fn,txt in [('fall-invite.cl2',a),('winter-champs.cl2',b),('fall-invite-2024.cl2',c),('summer-lc.cl2',d)]:
     open(OUT/fn,'w',newline='').write(txt)

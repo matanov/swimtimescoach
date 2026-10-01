@@ -59,6 +59,18 @@ table.grid{border-collapse:separate;border-spacing:0;font-variant-numeric:tabula
 .grid td .n{display:block;font:400 .7rem Barlow,sans-serif;color:var(--muted)}
 .grid tbody tr:hover td,.grid tbody tr:hover th.sw{background:var(--hover)}
 
+#viewbar{display:flex;align-items:center;gap:10px;margin:12px 24px 0;font-size:.88rem;color:var(--muted)}
+#viewbar[hidden]{display:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:5px 12px;cursor:pointer;font-weight:500;color:var(--ink)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button:hover{background:var(--hover)}
+.seg button[aria-pressed="true"]{background:var(--pool);color:var(--bg)}
+/* event view: stacked course times, e.g. 24.51Y over 28.30L */
+.grid td .ct{display:block;line-height:1.25}
+.grid td .ct i{font:500 .72em Barlow,sans-serif;font-style:normal;color:var(--muted);margin-left:2px}
+.grid td .ct.miss{font:400 .78rem Barlow,sans-serif;color:var(--muted)}
+
 .empty{padding:40px 24px;text-align:center;color:var(--muted)}
 
 dialog{border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);width:min(720px,94vw);max-height:86vh}
@@ -96,8 +108,9 @@ table.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
   #printhead p{margin:2px 0;color:#444}
   .wrap{overflow:visible;max-height:none;border:none;margin:0}
   .grid thead th,.grid th.sw{position:static}
-  .grid th,.grid td{font-size:.95em}
-  .grid th,.grid td{padding:3px 8px}
+  .grid th,.grid td{font-size:.95em;padding:3px 8px}
+  /* times and names the same size, larger than the headers */
+  .grid td,.grid th.sw .fn{font-size:1.3em}
   .grid td button{text-decoration:none!important;padding:0}
   .grid tr{break-inside:avoid}
   .grid thead{display:table-header-group}

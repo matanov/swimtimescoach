@@ -1,12 +1,14 @@
 /* UI: loading files, swimmer picker, best-times grid, print, CSV export, saved sessions. */
 (() => {
 "use strict";
-const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, STROKES, COURSE_ORDER } = window.CL2;
+const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets,
+        pairedDist, pairedLabel, courseBests, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
 // sources: the loaded file texts, kept so a session can be saved and reopened
-const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map() };
+// view: "course" = a column per event per course; "event" = one column per event, SC and LC times stacked
+const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map(), view: "course" };
 const seenText = new Set();
 
 function rebuildPeople(){
@@ -62,6 +64,7 @@ async function addFiles(fileList){
   for (const r of restored) {
     r.selected.forEach(k => { if (state.people.has(k)) state.selected.add(k); });
     if (r.appendix) $("appendixChk").checked = true;
+    if (r.view) setView(r.view, false);
   }
   document.body.classList.toggle("with-appendix", $("appendixChk").checked);
   if (!state.selected.size) {
@@ -73,7 +76,7 @@ async function addFiles(fileList){
 
 async function saveSessionFile(){
   try {
-    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked});
+    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view});
     download(new Blob([bytes], {type:"application/zip"}), `best-times-session-${new Date().toISOString().slice(0,10)}.zip`);
   } catch (e) { $("msg").textContent = `Couldn't save the session: ${e.message}`; }
 }
@@ -81,6 +84,8 @@ async function saveSessionFile(){
 /* ------------------------------------------------------------------ rendering */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const eventLabel = (dist, stroke) => `${dist} ${STROKES[stroke]}`;
+const eventTitle = e => e.course ? `${e.label} ${e.course}` : e.label;
+const noTime = list => list[0].time.dq ? "DQ" : (list[0].time.code || "—");
 const fmtDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"}) : "";
 
 function renderFiles(){
@@ -90,6 +95,7 @@ function renderFiles(){
   const has = state.swims.length > 0;
   for (const id of ["pickBtn","printBtn","csvBtn","saveBtn","clearBtn"]) document.getElementById(id).disabled = !has;
   document.getElementById("drop").style.display = has ? "none" : "";
+  document.getElementById("viewbar").hidden = !has;
 }
 
 function selectedPeople(){
@@ -100,12 +106,15 @@ function selectedPeople(){
 function buildGrid(){
   const people = selectedPeople();
   const keys = new Set(people.map(p => p.key));
-  // events -> person -> swims
+  const byEvent = state.view === "event";
+  // events -> person -> swims; in event view course is null and all courses share a column
   const events = new Map();
   for (const s of state.swims) {
     if (!keys.has(s.pkey)) continue;
-    const ek = `${s.course}|${s.stroke}|${String(s.dist).padStart(4,"0")}`;
-    if (!events.has(ek)) events.set(ek, {course:s.course, stroke:s.stroke, dist:s.dist, by:new Map()});
+    const course = byEvent ? null : s.course, dist = byEvent ? pairedDist(s) : s.dist;
+    const ek = `${course || "all"}|${s.stroke}|${String(dist).padStart(4,"0")}`;
+    if (!events.has(ek)) events.set(ek, {course, stroke:s.stroke, dist, by:new Map(),
+      label: byEvent ? pairedLabel(dist, s.stroke) : eventLabel(dist, s.stroke)});
     const e = events.get(ek);
     if (!e.by.has(s.pkey)) e.by.set(s.pkey, []);
     e.by.get(s.pkey).push(s);
@@ -121,31 +130,34 @@ function render(){
   const {people, events} = buildGrid();
   if (!state.swims.length) { wrap.innerHTML = `<div class="empty">No results loaded yet.</div>`; return; }
   if (!people.length) { wrap.innerHTML = `<div class="empty">Choose one or more swimmers to build the table.</div>`; return; }
+  const byEvent = state.view === "event";
   const courseName = c => ({SCY:"Short course yards", SCM:"Short course meters", LCM:"Long course meters"}[c] || "Course unknown");
-  // group consecutive events by course for the top header row
-  const groups = [];
-  for (const [, e] of events) {
-    const g = groups[groups.length-1];
-    if (g && g.course === e.course) g.n++; else groups.push({course:e.course, n:1});
+  // a heavier left border where the course (course view) or stroke (event view) changes
+  const groupOf = e => byEvent ? e.stroke : e.course;
+  const starts = events.map(([, e], i) => i === 0 || groupOf(events[i-1][1]) !== groupOf(e));
+  let h = `<table class="grid"><thead>`;
+  if (!byEvent) {
+    const groups = [];
+    for (const [, e] of events) {
+      const g = groups[groups.length-1];
+      if (g && g.course === e.course) g.n++; else groups.push({course:e.course, n:1});
+    }
+    h += `<tr class="h1"><th class="sw" rowspan="2">Swimmer</th>`;
+    for (const g of groups) h += `<th class="cg" colspan="${g.n}" scope="colgroup">${esc(courseName(g.course))}</th>`;
+    h += `</tr>`;
   }
-  let h = `<table class="grid"><thead><tr class="h1"><th class="sw" rowspan="2">Swimmer</th>`;
-  for (const g of groups) h += `<th class="cg" colspan="${g.n}" scope="colgroup">${esc(courseName(g.course))}</th>`;
-  h += `</tr><tr class="h2">`;
-  events.forEach(([, e], i) => {
-    const first = i === 0 || events[i-1][1].course !== e.course;
-    h += `<th scope="col" class="evh${first ? " gstart" : ""}">${esc(eventLabel(e.dist, e.stroke))}</th>`;
-  });
+  h += `<tr class="h2">${byEvent ? `<th class="sw">Swimmer</th>` : ""}`;
+  events.forEach(([, e], i) => { h += `<th scope="col" class="evh${starts[i] ? " gstart" : ""}">${esc(e.label)}</th>`; });
   h += `</tr></thead><tbody>`;
   for (const p of people) {
     h += `<tr><th class="sw" scope="row"><span class="fn">${esc(p.first)} ${esc(p.last)}</span><span class="tm">${esc([...p.teams].join(", "))}</span></th>`;
     events.forEach(([ek, e], i) => {
-      const first = i === 0 || events[i-1][1].course !== e.course;
-      const cls = first ? ` class="gstart"` : "";
+      const cls = starts[i] ? ` class="gstart"` : "";
       const list = e.by.get(p.key);
       if (!list) { h += `<td${cls}></td>`; return; }
       const b = bestOf(list);
-      const label = b ? fmt(b.time.cs) : (list[0].time.dq ? "DQ" : (list[0].time.code || "—"));
-      h += `<td${cls}><button data-ev="${esc(ek)}" data-p="${esc(p.key)}" aria-label="All ${esc(eventLabel(e.dist,e.stroke))} ${esc(e.course)} swims for ${esc(p.first)} ${esc(p.last)}">${esc(label)}${list.length > 1 ? `<span class="n">${list.length} swims</span>` : ""}</button></td>`;
+      const times = byEvent ? stackedTimes(list) : esc(b ? fmt(b.time.cs) : noTime(list));
+      h += `<td${cls}><button data-ev="${esc(ek)}" data-p="${esc(p.key)}" aria-label="All ${esc(eventTitle(e))} swims for ${esc(p.first)} ${esc(p.last)}">${times}${list.length > 1 ? `<span class="n">${list.length} swims</span>` : ""}</button></td>`;
     });
     h += `</tr>`;
   }
@@ -153,19 +165,40 @@ function render(){
   wrap.innerHTML = h;
   wrap._events = new Map(events);
   const h1 = wrap.querySelector("tr.h1 th.cg");
-  if (h1) wrap.querySelector("table").style.setProperty("--h1", h1.offsetHeight + "px");
+  wrap.querySelector("table").style.setProperty("--h1", (h1 ? h1.offsetHeight : 0) + "px");
   renderPrintHead(); renderAppendix(people, events);
 }
 
+// Event view cell: the short-course best(s) then the long-course best, each with
+// its course letter (24.51Y, 26.10S, 28.30L); a course with no swims shows —SC / —LC.
+function stackedTimes(list){
+  const {short, long} = courseBests(list);
+  const line = (entries, missing) => entries.length
+    ? entries.map(x => `<span class="ct">${esc(x.best ? fmt(x.best.time.cs) : noTime(x.swims))}<i>${x.letter}</i></span>`).join("")
+    : `<span class="ct miss">${missing}</span>`;
+  return line(short, "—SC") + line(long, "—LC");
+}
+
+function setView(view, rerender = true){
+  state.view = view === "event" ? "event" : "course";
+  document.querySelectorAll("#viewbar [data-view]").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === state.view));
+  if (rerender) render();
+}
+
+// Best is per course: yards and meters times aren't comparable.
 function historyTable(list){
-  const best = bestOf(list);
-  const sorted = list.slice().sort(bySwimOrder);
-  let h = `<table class="hist"><thead><tr><th>Date</th><th>Meet</th><th>Round</th><th>Time</th><th>Place</th><th>Age</th></tr></thead><tbody>`;
+  const courses = [...new Set(list.map(s => s.course))];
+  const bests = new Map(courses.map(c => [c, bestOf(list.filter(s => s.course === c))]));
+  const showCourse = courses.length > 1;
+  const showDist = new Set(list.map(s => s.dist)).size > 1;   // paired 400/500 etc.
+  const sorted = list.slice().sort((a,b) => (COURSE_ORDER[a.course]||9) - (COURSE_ORDER[b.course]||9) || bySwimOrder(a,b));
+  let h = `<table class="hist"><thead><tr><th>Date</th><th>Meet</th><th>Round</th>${showCourse ? "<th>Course</th>" : ""}<th>Time</th><th>Place</th><th>Age</th></tr></thead><tbody>`;
   for (const s of sorted) {
+    const best = bests.get(s.course);
     const isBest = s === best;
     const t = s.time.cs != null ? fmt(s.time.cs) : (s.time.dq ? "DQ" : (s.time.code || s.time.raw));
     const diff = (!isBest && best && s.time.cs != null) ? ` <span style="color:var(--muted);font:400 .8rem Barlow">+${fmt(s.time.cs - best.time.cs)}</span>` : "";
-    h += `<tr class="${isBest ? "best" : ""}"><td class="d">${esc(fmtDate(s.date))}</td><td>${esc(s.meet.label)}</td><td>${esc(s.round)}</td><td class="t">${esc(t)}${isBest ? `<span class="badge">Best</span>` : ""}${diff}</td><td>${s.place ?? ""}</td><td>${s.age ?? ""}</td></tr>`;
+    h += `<tr class="${isBest ? "best" : ""}"><td class="d">${esc(fmtDate(s.date))}</td><td>${esc(s.meet.label)}</td><td>${esc(s.round)}</td>${showCourse ? `<td>${showDist ? s.dist + " " : ""}${esc(s.course)}</td>` : ""}<td class="t">${esc(t)}${isBest ? `<span class="badge">Best</span>` : ""}${diff}</td><td>${s.place ?? ""}</td><td>${s.age ?? ""}</td></tr>`;
   }
   return h + `</tbody></table>`;
 }
@@ -174,7 +207,7 @@ function openDetail(ek, pk){
   const e = document.getElementById("wrap")._events.get(ek);
   const p = state.people.get(pk);
   const list = e.by.get(pk);
-  document.getElementById("dTitle").textContent = `${eventLabel(e.dist, e.stroke)} ${e.course}`;
+  document.getElementById("dTitle").textContent = eventTitle(e);
   document.getElementById("dSub").textContent = `${p.first} ${p.last} — ${list.length} swim${list.length > 1 ? "s" : ""}`;
   document.getElementById("dBody").innerHTML = historyTable(list);
   document.getElementById("detail").showModal();
@@ -194,7 +227,7 @@ function renderAppendix(people, events){
     let part = "";
     for (const [, e] of events) {
       const list = e.by.get(p.key);
-      if (list) part += `<h3>${esc(eventLabel(e.dist, e.stroke))} ${esc(e.course)}</h3>${historyTable(list)}`;
+      if (list) part += `<h3>${esc(eventTitle(e))}</h3>${historyTable(list)}`;
     }
     if (part) h += `<h2>${esc(p.first)} ${esc(p.last)}</h2>${part}`;
   }
@@ -230,14 +263,23 @@ function renderPicker(){
 function downloadCSV(){
   const {people, events} = buildGrid();
   const q = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
-  const lines = [["Swimmer","Team", ...events.map(([,e]) => `${eventLabel(e.dist, e.stroke)} ${e.course}`)].map(q).join(",")];
+  // event view: an SC and an LC column per event, times carry their course letter
+  const byEvent = state.view === "event";
+  const lettered = xs => xs.filter(x => x.best).map(x => fmt(x.best.time.cs) + x.letter).join(" / ");
+  const head = byEvent ? events.flatMap(([,e]) => [`${e.label} SC`, `${e.label} LC`]) : events.map(([,e]) => eventTitle(e));
+  const cells = (e, p) => {
+    const l = e.by.get(p.key);
+    if (byEvent) { if (!l) return ["", ""]; const {short, long} = courseBests(l); return [lettered(short), lettered(long)]; }
+    const b = l && bestOf(l); return [b ? fmt(b.time.cs) : ""];
+  };
+  const lines = [["Swimmer","Team", ...head].map(q).join(",")];
   for (const p of people) {
-    lines.push([`${p.first} ${p.last}`, [...p.teams].join("; "), ...events.map(([,e]) => { const l = e.by.get(p.key); const b = l && bestOf(l); return b ? fmt(b.time.cs) : ""; })].map(q).join(","));
+    lines.push([`${p.first} ${p.last}`, [...p.teams].join("; "), ...events.flatMap(([,e]) => cells(e, p))].map(q).join(","));
   }
   lines.push("");
   lines.push(["Swimmer","Course","Event","Date","Meet","Round","Time","Place","Age"].map(q).join(","));
   for (const p of people) for (const [, e] of events) for (const s of (e.by.get(p.key) || [])) {
-    lines.push([`${p.first} ${p.last}`, e.course, eventLabel(e.dist,e.stroke), s.date, s.meet.label, s.round,
+    lines.push([`${p.first} ${p.last}`, s.course, eventLabel(s.dist,s.stroke), s.date, s.meet.label, s.round,
       s.time.cs != null ? fmt(s.time.cs) : (s.time.dq ? "DQ" : s.time.code), s.place, s.age].map(q).join(","));
   }
   download(new Blob([lines.join("\r\n")], {type:"text/csv"}), "best-times.csv");
@@ -268,6 +310,7 @@ $("picker").addEventListener("close", render);
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => b.closest("dialog").close());
 document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
 $("wrap").addEventListener("click", e => { const b = e.target.closest("button[data-ev]"); if (b) openDetail(b.dataset.ev, b.dataset.p); });
+document.querySelectorAll("#viewbar [data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
 $("appendixChk").onchange = e => document.body.classList.toggle("with-appendix", e.target.checked);
 
 const drop = $("drop");

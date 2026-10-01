@@ -1,6 +1,6 @@
 /*
  * Saved sessions: one .zip holding every loaded .cl2/.sd3 text plus
- * session.json (selected swimmers, print option). Opening it re-parses the
+ * session.json (selected swimmers, print option, table view). Opening it re-parses the
  * files, so a session always reflects the current parser. Nothing is stored
  * anywhere but the file the user downloads.
  *
@@ -14,7 +14,7 @@ const APP = "cl2-best-times";
 const VERSION = 1;
 
 // sources: [{name, text}], selected: iterable of person keys
-async function saveSession(JSZip, {sources, selected, appendix}){
+async function saveSession(JSZip, {sources, selected, appendix, view}){
   const zip = new JSZip();
   const files = sources.map((s, i) => {
     // index prefix keeps same-named files (e.g. two "results.cl2") apart
@@ -24,12 +24,13 @@ async function saveSession(JSZip, {sources, selected, appendix}){
   });
   zip.file(MANIFEST, JSON.stringify({
     app: APP, version: VERSION, saved: new Date().toISOString(),
-    files, selected: [...selected], appendix: !!appendix,
+    files, selected: [...selected], appendix: !!appendix, view: view || "course",
   }, null, 2));
   return zip.generateAsync({type: "uint8array", compression: "DEFLATE"});
 }
 
-// Returns {sources, selected, appendix}, or null if the zip isn't a saved session.
+// Returns {sources, selected, appendix, view}, or null if the zip isn't a saved session.
+// view is null for sessions saved before views existed.
 async function readSession(zip){
   const mf = zip.file(MANIFEST);
   if (!mf) return null;
@@ -43,7 +44,8 @@ async function readSession(zip){
     if (!f) throw new Error(`session is missing ${name}`);
     sources.push({name, text: await f.async("string")});
   }
-  return {sources, selected: Array.isArray(m.selected) ? m.selected : [], appendix: !!m.appendix};
+  const view = ["course", "event"].includes(m.view) ? m.view : null;
+  return {sources, selected: Array.isArray(m.selected) ? m.selected : [], appendix: !!m.appendix, view};
 }
 
 const api = { saveSession, readSession, MANIFEST };

@@ -16,10 +16,11 @@ test("a saved session reopens with the same files, selection and print option", 
   const people = CL2.assignPeople(sources.flatMap(s => CL2.parseCL2(s.text, s.name).swims));
   const rossi = [...people.values()].find(p => p.last === "Rossi").key;
 
-  const s = await reopen(await saveSession(JSZip, { sources, selected: new Set([rossi]), appendix: true }));
+  const s = await reopen(await saveSession(JSZip, { sources, selected: new Set([rossi]), appendix: true, view: "event" }));
   assert.deepEqual(s.sources, sources);
   assert.deepEqual(s.selected, [rossi]);
   assert.equal(s.appendix, true);
+  assert.equal(s.view, "event");
 
   // person keys are derived from the files, so they still match after re-parsing
   const again = CL2.assignPeople(s.sources.flatMap(x => CL2.parseCL2(x.text, x.name).swims));
@@ -49,4 +50,10 @@ test("a session from a newer app version is refused", async () => {
   const zip = new JSZip();
   zip.file("session.json", JSON.stringify({ app: "cl2-best-times", version: 99, files: [] }));
   await assert.rejects(readSession(zip), /newer version/);
+});
+
+test("a session saved before views existed has no view", async () => {
+  const zip = new JSZip();
+  zip.file("session.json", JSON.stringify({ app: "cl2-best-times", version: 1, files: [], selected: [] }));
+  assert.equal((await readSession(zip)).view, null);
 });

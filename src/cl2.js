@@ -153,9 +153,34 @@ function labelMeets(meets){
   return meets;
 }
 
+/* ------------------------------------------------------------------ event view
+   One column per event across all courses. Free distances that differ
+   between yards and meters share a column (500Y with 400M, ...). */
+const YARDS_TO_METERS = {500:400, 1000:800, 1650:1500};
+const METERS_TO_YARDS = {400:500, 800:1000, 1500:1650};
+const COURSE_LETTER = {SCY:"Y", SCM:"S", LCM:"L", "?":"?"};   // Hy-Tek's suffixes
+
+const pairedDist = s => (s.stroke === "1" && s.course === "SCY" && YARDS_TO_METERS[s.dist]) || s.dist;
+const pairedLabel = (dist, stroke) =>
+  `${stroke === "1" && METERS_TO_YARDS[dist] ? `${dist}/${METERS_TO_YARDS[dist]}` : dist} ${STROKES[stroke]}`;
+
+// Yards and meters times can't be compared, so each course keeps its own best:
+// short = SCY, SCM, unknown (in that order); long = LCM. best is null when
+// the course has swims but none with a valid time (DQ, NS, ...).
+function courseBests(list){
+  const out = {short: [], long: []};
+  for (const course of ["SCY", "SCM", "?", "LCM"]) {
+    const swims = list.filter(s => s.course === course);
+    if (swims.length) (course === "LCM" ? out.long : out.short)
+      .push({course, letter: COURSE_LETTER[course], best: bestOf(swims), swims});
+  }
+  return out;
+}
+
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              STROKES, ROUND_ORDER, COURSES, COURSE_ORDER };
+              pairedDist, pairedLabel, courseBests,
+              STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;
 })(typeof window !== "undefined" ? window : globalThis);

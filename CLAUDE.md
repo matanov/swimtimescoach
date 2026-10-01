@@ -26,6 +26,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - D3 follows only the first D0 for a swimmer in a file, so swimmers are shared per file to propagate the preferred name and 14-char USS ID.
 - D0s with no distance/stroke are relay-only swimmer entries and are skipped.
 - Best time = fastest swim with a valid time; DQ/NS/SCR/DNF never count.
+- Never pick a "best" across courses: yards and meters times aren't comparable. The event view (`courseBests`) keeps one best per course.
 - Meets are never merged by name; `labelMeets` gives same-name meets distinct labels. Show `meet.label` (or `datedLabel` next to a date), not `meet.name`.
 - Saved sessions store the raw file texts, not parsed data, and are re-parsed on open. Bump `VERSION` in `src/session.js` only if `session.json` changes incompatibly.
 - Cross-file logic (`assignPeople`, `bestOf`, `labelMeets`) lives in `src/cl2.js` so it is testable in Node; `src/app.js` is DOM only.
