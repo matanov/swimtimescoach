@@ -18,7 +18,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - `npm test` — parser tests (`node --test`)
 - `npm run serve` — local server on 127.0.0.1:8000 (localhost only)
 - `python3 tests/gen_fixtures.py` — regenerate synthetic fixtures
-- `npm run build-share` — build git-ignored `src/share-template.js` and `swimtimescoach.html` (CI does this before deploy; "Share as file" and the download link need them locally)
+- `npm run build-share` — build git-ignored `src/share-template.js`, `swimtimescoach.html` and `demo.html` (sample team from `docs/sample-data/`) (CI does this before deploy; "Share as file" and the download link need them locally)
 - `npm run anonymize -- <folder>` — anonymize real `.cl2` files into git-ignored `tests/fixtures-private/`
 
 ## Real data

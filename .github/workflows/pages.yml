@@ -39,7 +39,7 @@ jobs:
         run: |
           node tools/build-share.js
           mkdir _site
-          cp -r index.html swimtimescoach.html src vendor _site/
+          cp -r index.html swimtimescoach.html demo.html src vendor _site/
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

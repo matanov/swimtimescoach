@@ -7,6 +7,9 @@ get a best-times table you can click through, print or export.
 **Private by design:** everything happens in your browser. Result files are
 never uploaded, and nothing about your swimmers leaves your computer.
 
+**[Try the live demo »](https://swimtimescoach.com/demo.html)** with a made-up team: tap any time to see
+every swim.
+
 ## Privacy
 
 Meet results contain children's names, ages and times, so the app is built to
@@ -80,13 +83,14 @@ Two views, switched with **Columns** above the table:
 
 **By course**: each course in its own block of columns.
 
-![Best-times table, By course view: short course meters and long course meters columns for six swimmers](docs/images/view-by-course.png)
+[![Best-times table, By course view: short course meters and long course meters columns for six swimmers](docs/images/view-by-course.png)](https://swimtimescoach.com/demo.html)
 
 **By event (SC + LC)**: short course over long course in one column per event.
 
-![Best-times table, By event view: each cell stacks the short course meters time over the long course meters time](docs/images/view-by-event.png)
+[![Best-times table, By event view: each cell stacks the short course meters time over the long course meters time](docs/images/view-by-event.png)](https://swimtimescoach.com/demo.html)
 
-*Screenshots use the made-up sample team in [`docs/sample-data/`](docs/sample-data).*
+*Click either screenshot to open the [live demo](https://swimtimescoach.com/demo.html) and try it. Both use the
+made-up sample team in [`docs/sample-data/`](docs/sample-data).*
 
 Yards and meters times are never compared, so each course keeps its own best.
 500/1000/1650 yards free share a column with 400/800/1500 meters, and the
@@ -128,7 +132,7 @@ dependencies. Third-party code and fonts are vendored in `vendor/`.
 npm test                      # all tests, Node 18+, no dependencies
 python3 tests/gen_fixtures.py # regenerate synthetic fixtures
 npm run serve                 # local server on 127.0.0.1:8000
-npm run build-share           # build src/share-template.js ("Share as file") and swimtimescoach.html (downloadable app)
+npm run build-share           # build src/share-template.js ("Share as file"), swimtimescoach.html (downloadable app), demo.html
 ```
 
 Every push to `main` runs the tests and, if they pass, publishes `index.html`,
@@ -136,7 +140,8 @@ Every push to `main` runs the tests and, if they pass, publishes `index.html`,
 building the app as one self-contained page: `src/share-template.js` (that
 page as a string, for **Share as file**) and `swimtimescoach.html` (the same
 page with no data: the downloadable app, which copies its own page to share
-from). Both are generated and git-ignored; the website can't assemble them
+from), plus `demo.html` (that page loaded with the sample team). All are
+generated and git-ignored; the website can't assemble them
 itself because its CSP stops it from reading its own files at run time. The shared page
 has its own CSP: only its exact inline scripts (by SHA-256 hash), embedded
 fonts, no network.

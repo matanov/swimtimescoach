@@ -102,6 +102,7 @@ table.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 .linkbtn{all:unset;cursor:pointer;color:var(--pool);text-decoration:underline;text-underline-offset:2px;font-weight:500}
 .linkbtn:hover{text-decoration-thickness:2px}
 .linkbtn:focus-visible{outline:2px solid var(--pool);outline-offset:2px;border-radius:2px}
+#drop .demo{margin:8px 0 0;font-size:.88rem}
 #drop .private{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 0;font-size:.88rem}
 footer{margin:0 24px 24px;font-size:.85rem;color:var(--muted)}
 footer p{margin:0}
