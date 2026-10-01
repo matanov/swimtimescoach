@@ -10,13 +10,13 @@ cell to see all swims for that event, and print to PDF or download CSV.
 
 ## Constraints
 - No build step, no framework, no npm runtime dependencies. Plain ES2020 scripts loaded by `index.html`.
-- Everything runs client-side; never send result data anywhere.
+- Everything runs client-side; never send result data anywhere. The CSP meta in `index.html` enforces this (`connect-src 'none'`, own files only): don't loosen it, add external resources, or store result data in browser storage.
 - Third-party code and fonts are vendored in `vendor/` (JSZip 3.10.1, Barlow fonts), not loaded from a CDN.
 - `src/cl2.js` and `src/session.js` must stay usable from both the browser (`window.CL2`, `window.Session`) and Node (`require`) so tests can run without a DOM.
 
 ## Commands
 - `npm test` — parser tests (`node --test`)
-- `npm run serve` — local server on :8000
+- `npm run serve` — local server on 127.0.0.1:8000 (localhost only)
 - `python3 tests/gen_fixtures.py` — regenerate synthetic fixtures
 - `npm run anonymize -- <folder>` — anonymize real `.cl2` files into git-ignored `tests/fixtures-private/`
 
@@ -36,6 +36,10 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - Saved sessions store the raw file texts, not parsed data, and are re-parsed on open. Bump `VERSION` in `src/session.js` only if `session.json` changes incompatibly.
 - Cross-file logic (`assignPeople`, `bestOf`, `labelMeets`) lives in `src/cl2.js` so it is testable in Node; `src/app.js` is DOM only.
 
+## Docs
+- The in-app help (`#help` dialog in `index.html`) and the README user guide say the same things; update both when behavior changes.
+
 ## Testing changes
 - Add a fixture or extend `tests/gen_fixtures.py` for any parser change, then add a test in `tests/parser.test.js`.
 - For UI changes, check the print preview (landscape) as well as the screen layout, in both light and dark mode.
+- Browser checks must work under the CSP: no inline scripts, so drive the page from an external script file on the same origin (e.g. in git-ignored `tests/fixtures-private/`).

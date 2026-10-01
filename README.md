@@ -1,48 +1,120 @@
-# CL2 Best Times
+# Swim Times Coach
 
-A browser-only viewer that turns Hy-Tek `.cl2` (SDIF v3) swim meet results into a
-best-times table: swimmers in rows, events in columns grouped by course. Click a time
-to see every swim in that event. Print to PDF or export CSV.
+See every swimmer's best times on one page, straight from Hy-Tek meet results.
+Load `.cl2` result files from as many meets as you like, pick your swimmers, and
+get a best-times table you can click through, print or export.
 
-No server, no build step, no data upload. Files are parsed in the browser.
+**Private by design:** everything happens in your browser. Result files are
+never uploaded, and nothing about your swimmers leaves your computer.
 
-## Use
+## Privacy
 
-Open `index.html` directly, or serve the folder:
+Meet results contain children's names, ages and times, so the app is built to
+keep them on your device:
+
+- **Nothing is uploaded.** Files are read by the page itself, in your browser.
+  There is no server, no account and no database.
+- **The browser enforces it.** The page carries a Content Security Policy that
+  blocks it from sending anything over the network (`connect-src 'none'`) and
+  from loading code, fonts or styles from anywhere but its own files. Even a
+  future bug or added script couldn't quietly send data out.
+- **Nothing is kept.** No cookies, no tracking, no browser storage. Closing
+  the tab or pressing **Clear** forgets everything.
+- **What you save is yours.** Saved sessions, PDFs and CSVs are ordinary files
+  on your computer. They contain swimmers' names and results, so share them
+  only with people who should see them.
+
+If you use a hosted copy of the app (for example on GitHub Pages), the host
+only serves the app's own files. Your result files are still read in your
+browser and never reach the host.
+
+## Getting started
+
+No install needed. Either open `index.html` in a browser, or run it from a
+local server:
 
 ```sh
-npm run serve        # python3 -m http.server 8000 → http://localhost:8000
+npm run serve        # http://localhost:8000, reachable from this computer only
 ```
 
-Then add `.cl2`, `.sd3`, or Hy-Tek results `.zip` files (drag and drop works).
+## User guide
 
-### Views
+The same guide is in the app under **Help & privacy**.
 
-**By course** (default) has a column per event per course, grouped under
-SCY, SCM and LCM. **By event (SC + LC)** has one column per event; each cell
-stacks the swimmer's short-course best over their long-course best, marked
-with Hy-Tek's course letters (`24.51Y`, `26.40S`, `27.80L`). A course with
-no swims shows `—SC` or `—LC`; an event with no swims at all is blank.
-Yards and meters times are never compared, so a swimmer with both SCY and
-SCM swims gets both. 500/1000/1650 yards free share a column with
-400/800/1500 meters; the header names only the distances actually swum
-("400 Free" for a meters-only team, "400/500 Free" when both appear). Click any cell for every swim in that event, best
-marked per course. Print and CSV follow the current view.
+### 1. Load results
+- Get meet results as **`.cl2`** files: Hy-Tek's results export, usually from
+  the meet host or results site. **`.sd3`** files and **`.zip`** results
+  archives work too.
+- Click **Add files** or drop them on the page. Add more meets at any time; a
+  file that's already loaded is skipped.
 
-### Saving your work
+### 2. Choose swimmers
+**Choose swimmers** lists everyone in the loaded meets. Search by name or
+filter by team, then **Show table**. With 15 swimmers or fewer, everyone is
+selected automatically.
 
-**Save session** downloads one `.zip` with every loaded meet file plus your
-swimmer selection and print option. Reopen it later with **Open session** (or
-drop it on the page) to pick up where you left off. It's an ordinary zip: unzip
-it to get the original `.cl2` files back. Nothing is stored in the browser or
-sent anywhere; the session file is the only copy.
+### 3. Read the table
+Each cell is a swimmer's best time in that event. *"3 swims"* under a time
+means there are more: click the time to see every swim in that event, with the
+best marked. DQ, NS, SCR and DNF never count as a best time.
 
-## Develop
+Two views, switched with **Columns** above the table:
+
+| View | Layout |
+|---|---|
+| **By course** | Each course gets its own columns: short course yards, short course meters, long course meters. |
+| **By event (SC + LC)** | One column per event. Each cell stacks the short-course best over the long-course best, with Hy-Tek's course letters: **Y** yards, **S** short course meters, **L** long course meters, e.g. `35.31S` over `34.06L`. **—SC** or **—LC** means no swim in that course; a blank cell means no swims at all. |
+
+Yards and meters times are never compared, so each course keeps its own best.
+500/1000/1650 yards free share a column with 400/800/1500 meters, and the
+header lists only the distances actually swum ("400 Free" for a meters-only
+team, "400/500 Free" when both appear).
+
+### 4. Save, print, export
+- **Save session** downloads one `.zip` with every loaded meet, the swimmers
+  you picked and the current view. Reopen it later with **Open session** (or
+  drop it on the page) to pick up where you left off. It's an ordinary zip:
+  unzip it to get the original `.cl2` files back.
+- **Print / Save PDF** prints the table in landscape. Tick **Include all swims
+  in print** to add every swim after the table.
+- **Download CSV** gives the best-times table and every individual swim, for
+  spreadsheets. It follows the current view.
+
+### Good to know
+- Swimmers are matched across meets by name. If a name is spelled differently
+  in two meets, they show as two people. Two swimmers with the same name are
+  told apart by their USS IDs when the files include them.
+- Meets that share a name (the same invitational every year) stay separate,
+  labelled with the year, date, city or file name, whichever tells them apart.
+- Relays aren't shown yet; only individual swims.
+
+## For developers
+
+Plain HTML, CSS and JavaScript: no build step, no framework, no runtime
+dependencies. Third-party code and fonts are vendored in `vendor/`.
 
 ```sh
-npm test                      # parser tests, Node 18+, no dependencies
+npm test                      # all tests, Node 18+, no dependencies
 python3 tests/gen_fixtures.py # regenerate synthetic fixtures
+npm run serve                 # local server on 127.0.0.1:8000
 ```
+
+Privacy rules for changes: keep the Content Security Policy in `index.html`
+as strict as it is (in particular `connect-src 'none'`), load nothing from
+other sites, and don't store result data in the browser.
+
+| Path | What it is |
+|---|---|
+| `index.html` | Page markup, Content Security Policy, in-app help |
+| `src/cl2.js` | SDIF v3 / CL2 parser, plus swimmer matching, best times and meet labels (browser global `CL2`, or `require` in Node) |
+| `src/app.js` | UI: file loading, swimmer picker, grid, detail dialog, print, CSV, sessions |
+| `src/session.js` | Save/open a session `.zip` (meet files + `session.json`) |
+| `src/styles.css` | Styles, including light/dark theme and print layout |
+| `vendor/jszip.min.js` | JSZip 3.10.1, for reading `.zip` files |
+| `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
+| `tests/` | Node tests and synthetic fixtures |
+| `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
+| `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
 
 ### Testing with real meet files
 
@@ -60,26 +132,7 @@ teams and meets get fake names, and USS IDs and birth dates are replaced. The
 same swimmer gets the same fake name in every file and on every run, via a
 mapping kept at `~/swim-private/cl2-mapping.json` (`--map` to change; it must
 be outside the repo, since it holds the real names). Output goes to the
-git-ignored `tests/fixtures-private/`, where `npm test` picks it up.
-Before writing anything, the script checks that no real name, ID, team or meet
+git-ignored `tests/fixtures-private/`, where `npm test` picks it up. Before
+writing anything, the script checks that no real name, ID, team or meet
 appears in the output, and that the app parses every swim identically.
-
-| Path | What it is |
-|---|---|
-| `index.html` | Page markup |
-| `src/cl2.js` | SDIF v3 / CL2 parser, plus swimmer matching, best times and meet labels (browser global `CL2`, or `require` in Node) |
-| `src/app.js` | UI: file loading, swimmer picker, grid, detail dialog, print, CSV, sessions |
-| `src/session.js` | Save/open a session `.zip` (meet files + `session.json`) |
-| `src/styles.css` | Styles, including light/dark theme and print layout |
-| `vendor/jszip.min.js` | JSZip 3.10.1, for reading results `.zip` files |
-| `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL), so no font CDN is contacted |
-| `tests/` | Node tests and synthetic fixtures |
-| `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
-| `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
-
-## Known limitations
-
-- Fixtures are synthetic, built to the SDIF v3 spec; add real Hy-Tek exports to `tests/fixtures/` as they're verified.
-- Swimmers are matched across meets by name; same-name swimmers are split only when their USS IDs differ. Spelling variations between meets produce two rows.
-- Relays are ignored; only individual swims are shown.
-- Meets with the same name stay separate. They are labelled with the year, then the date, city, or file name, whichever tells them apart.
+Relay and split records are dropped, since the app doesn't use them yet.

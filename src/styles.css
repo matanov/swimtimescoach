@@ -96,6 +96,18 @@ table.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 .pk-list label small{color:var(--muted);margin-left:auto;white-space:nowrap}
 .pk-foot{display:flex;justify-content:space-between;gap:8px;padding:12px 20px;border-top:1px solid var(--line)}
 
+.linkbtn{all:unset;cursor:pointer;color:var(--pool);text-decoration:underline;text-underline-offset:2px;font-weight:500}
+.linkbtn:hover{text-decoration-thickness:2px}
+.linkbtn:focus-visible{outline:2px solid var(--pool);outline-offset:2px;border-radius:2px}
+#drop .private{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 0;font-size:.88rem}
+footer{margin:0 24px 24px;font-size:.85rem;color:var(--muted)}
+footer p{margin:0}
+#help{width:min(680px,94vw)}
+.help section+section{border-top:1px solid var(--line);margin-top:4px}
+.help h3{margin:14px 0 6px;font:700 1.15rem/1.2 "Barlow Condensed",sans-serif}
+.help ul,.help ol{margin:0 0 10px;padding-left:1.2em}
+.help li{margin:4px 0}
+
 #printhead,#appendix{display:none}
 
 @media print{

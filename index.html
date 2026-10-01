@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Privacy guarantee, enforced by the browser: the page can load its own files
+     and nothing else, and can't send anything anywhere (connect-src 'none'). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Best Times — CL2 Viewer</title>
 <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
 <header>
-  <h1>Best Times<small>Load Hy-Tek .cl2 / .sd3 results or the results .zip. Nothing leaves your browser.</small></h1>
+  <h1>Best Times<small>Load Hy-Tek .cl2 / .sd3 results or the results .zip. Nothing leaves your browser. <button type="button" class="linkbtn noprint" id="helpBtn">Help &amp; privacy</button></small></h1>
   <div class="actions">
     <button class="btn primary" id="addBtn">Add files</button>
     <button class="btn" id="openBtn" title="Reopen a session saved with Save session">Open session</button>
@@ -22,7 +25,9 @@
   <input type="file" id="fileInput" multiple accept=".cl2,.sd3,.zip,.CL2,.SD3,.ZIP" hidden>
 </header>
 
-<div id="drop"><strong>Drop .cl2 files or a saved session here</strong> or use Add files. You can add more meets at any time.</div>
+<div id="drop"><strong>Drop .cl2 files or a saved session here</strong> or use Add files. You can add more meets at any time.
+  <p class="private"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-.5V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z"/></svg>
+  Your files are read on this device and never uploaded.</p></div>
 <div id="files"></div>
 <div id="msg" role="status"></div>
 <div id="viewbar" class="noprint" hidden>
@@ -50,6 +55,50 @@
   <div class="dbody" id="dBody"></div>
 </dialog>
 
+<dialog id="help" aria-labelledby="helpTitle">
+  <div class="dhead">
+    <div><h2 id="helpTitle">Help &amp; privacy</h2><p>Best times from Hy-Tek meet results, in your browser.</p></div>
+    <button class="btn" data-close>Close</button>
+  </div>
+  <div class="dbody help">
+    <section>
+      <h3>Your data stays with you</h3>
+      <ul>
+        <li>Result files are read by this page, on this device. They are never uploaded, and the page is blocked from sending anything over the network.</li>
+        <li>No accounts, no cookies, no tracking. Nothing is stored in the browser: closing the tab or pressing <b>Clear</b> forgets everything.</li>
+        <li>A saved session is a file you download and keep. It contains swimmers' names and results, so share it only with people who should see them.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>Getting started</h3>
+      <ol>
+        <li>Get the meet results as <b>.cl2</b> files (Hy-Tek's results export, usually from the meet host or results site). <b>.sd3</b> files and <b>.zip</b> results archives work too.</li>
+        <li>Click <b>Add files</b> or drop them on the page. Add more meets at any time; a file you've already added is skipped.</li>
+        <li>Pick swimmers with <b>Choose swimmers</b>. Search by name or filter by team.</li>
+      </ol>
+    </section>
+    <section>
+      <h3>Reading the table</h3>
+      <ul>
+        <li>Each cell is the swimmer's best time. <i>"3 swims"</i> means there are more: click the time to see every swim in that event, with the best marked.</li>
+        <li><b>By course</b> gives each course its own columns: short course yards, short course meters, long course meters.</li>
+        <li><b>By event (SC + LC)</b> puts each event in one column, short course best over long course best. Letters show the course: <b>Y</b> yards, <b>S</b> short course meters, <b>L</b> long course meters. <b>—SC</b> or <b>—LC</b> means no swim in that course; a blank cell means no swims at all.</li>
+        <li>Yards and meters times are never compared, so each course keeps its own best. 500/1000/1650 yards free share a column with 400/800/1500 meters.</li>
+        <li>DQ, NS, SCR and DNF never count as a best time.</li>
+        <li>Swimmers are matched across meets by name. If a name is spelled differently in two meets, they show as two people.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>Saving and sharing</h3>
+      <ul>
+        <li><b>Save session</b> downloads one .zip with every meet you've loaded, the swimmers you picked and the current view. Later, <b>Open session</b> (or drop the file on the page) picks up where you left off.</li>
+        <li><b>Print / Save PDF</b> prints the table in landscape. Tick <b>Include all swims in print</b> to add every swim after the table.</li>
+        <li><b>Download CSV</b> gives the best times and every swim, for spreadsheets.</li>
+      </ul>
+    </section>
+  </div>
+</dialog>
+
 <dialog id="picker">
   <div class="dhead">
     <div><h2>Choose swimmers</h2><p id="pkCount"></p></div>
@@ -68,6 +117,11 @@
     <button class="btn primary" data-close>Show table</button>
   </div>
 </dialog>
+
+<footer class="noprint">
+  <p><b>Private by design.</b> Files are read in your browser and never uploaded. No accounts, cookies or tracking.
+    <button type="button" class="linkbtn" data-help>How it works</button></p>
+</footer>
 
 <script src="vendor/jszip.min.js"></script>
 <script src="src/cl2.js"></script>
