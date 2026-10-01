@@ -30,8 +30,8 @@ browser and never reach the host.
 
 ## Getting started
 
-Use it online at **https://matanov.github.io/swimtimescoach/**. Nothing to
-install, and your files are still read only in your browser.
+Use it online at **https://swimtimescoach.com**. Nothing to install, and your
+files are still read only in your browser.
 
 Or run your own copy: open `index.html` in a browser, or start a local server:
 
