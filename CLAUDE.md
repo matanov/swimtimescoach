@@ -18,7 +18,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - `npm test` — parser tests (`node --test`)
 - `npm run serve` — local server on 127.0.0.1:8000 (localhost only)
 - `python3 tests/gen_fixtures.py` — regenerate synthetic fixtures
-- `npm run build-share` — build git-ignored `src/share-template.js` (CI does this before deploy; "Share as file" needs it locally)
+- `npm run build-share` — build git-ignored `src/share-template.js` and `swimtimescoach.html` (CI does this before deploy; "Share as file" and the download link need them locally)
 - `npm run anonymize -- <folder>` — anonymize real `.cl2` files into git-ignored `tests/fixtures-private/`
 
 ## Real data
@@ -39,6 +39,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 
 ## Share as file
 - `tools/build-share.js` inlines index.html, styles, fonts and scripts into one template; it fails loudly if the index.html snippets it replaces change. App scripts must not contain `<!--` (breaks inline script parsing); `</script` is escaped automatically.
+- `swimtimescoach.html` (downloadable app) is the template unfilled; app.js detects that (`isDownloadedApp`) and captures its own page as the share template before changing the DOM. Elements marked `data-site-only` in index.html (links to site files) are stripped from it.
 - A shared file must contain only the selected swimmers: data goes through `trimToSwimmers`, and `shareFile` re-renders before copying the static table and swim list.
 
 ## Docs

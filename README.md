@@ -33,7 +33,14 @@ browser and never reach the host.
 Use it online at **https://swimtimescoach.com**. Nothing to install, and your
 files are still read only in your browser.
 
-Or run your own copy: open `index.html` in a browser, or start a local server:
+Or **download the app as one file**:
+[swimtimescoach.com/swimtimescoach.html](https://swimtimescoach.com/swimtimescoach.html)
+(about 270 KB, also linked in the app's footer). Double-click it and it opens
+in your browser with everything built in: it works offline, needs no install,
+and keeps the same privacy protections. It doesn't update itself, so download
+it again now and then for new features.
+
+To work on the code, open `index.html` in a browser or start a local server:
 
 ```sh
 npm run serve        # http://localhost:8000, reachable from this computer only
@@ -107,14 +114,16 @@ dependencies. Third-party code and fonts are vendored in `vendor/`.
 npm test                      # all tests, Node 18+, no dependencies
 python3 tests/gen_fixtures.py # regenerate synthetic fixtures
 npm run serve                 # local server on 127.0.0.1:8000
-npm run build-share           # build src/share-template.js, needed for "Share as file"
+npm run build-share           # build src/share-template.js ("Share as file") and swimtimescoach.html (downloadable app)
 ```
 
 Every push to `main` runs the tests and, if they pass, publishes `index.html`,
 `src/` and `vendor/` to GitHub Pages (`.github/workflows/pages.yml`), after
-building `src/share-template.js`. That file is the whole app as one HTML
-string for **Share as file**; it's generated and git-ignored, because the
-page's CSP stops it from reading its own files at run time. The shared page
+building the app as one self-contained page: `src/share-template.js` (that
+page as a string, for **Share as file**) and `swimtimescoach.html` (the same
+page with no data: the downloadable app, which copies its own page to share
+from). Both are generated and git-ignored; the website can't assemble them
+itself because its CSP stops it from reading its own files at run time. The shared page
 has its own CSP: only its exact inline scripts (by SHA-256 hash), embedded
 fonts, no network.
 
@@ -133,7 +142,7 @@ other sites, and don't store result data in the browser.
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
 | `tests/` | Node tests and synthetic fixtures |
 | `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
-| `tools/build-share.js` | Builds the one-file template used by **Share as file** |
+| `tools/build-share.js` | Builds the one-file app: the **Share as file** template and the downloadable `swimtimescoach.html` |
 | `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
 
 ### Testing with real meet files

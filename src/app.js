@@ -1,6 +1,17 @@
 /* UI: loading files, swimmer picker, best-times grid, print, CSV export, saved sessions, sharing. */
 (() => {
 "use strict";
+// The downloadable app (swimtimescoach.html) is the share template with nothing filled
+// in. It keeps a copy of its own page, before anything changes it, to make shared files
+// from, since it can't load src/share-template.js like the website does.
+const embeddedData = document.getElementById("sharedSession");
+const isDownloadedApp = !!embeddedData && !/^[A-Za-z0-9+/=\s]+$/.test(embeddedData.textContent);
+if (isDownloadedApp) {
+  window.SHARE_TEMPLATE = "<!doctype html>\n" + document.documentElement.outerHTML;
+  document.body.classList.replace("shared", "downloaded");
+  document.getElementById("sharednote").remove();
+  document.title = "Best Times";
+}
 // A shared file starts as "nojs" (static table whose times open their history with
 // CSS only, see staticGrid) until scripts run; then the full app takes over.
 document.documentElement.classList.remove("nojs");
@@ -412,6 +423,6 @@ const drop = $("drop");
 document.addEventListener("drop", e => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
 
 // Opening a shared file (see shareFile) loads its swimmers straight away
-const embedded = $("sharedSession");
-if (embedded) addFiles([new File([fromBase64(embedded.textContent)], "shared-session.zip")]);
+if (isDownloadedApp) { renderFiles(); render(); }
+else if (embeddedData) addFiles([new File([fromBase64(embeddedData.textContent)], "shared-session.zip")]);
 })();

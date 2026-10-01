@@ -57,3 +57,9 @@ test("trimming drops relays and splits, and keeps a swimmer's D3", () => {
   const s = CL2.parseCL2(t, "x").swims;
   assert.ok(s.every(x => x.swimmer.pref === "Marco" && x.swimmer.ussNew === "010111MARAROSS"));
 });
+
+test("downloadable app and shared files carry no links back to the website", () => {
+  const html = buildTemplate();
+  assert.doesNotMatch(html, /data-site-only|href="swimtimescoach\.html"/);
+  assert.match(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"), /href="swimtimescoach\.html" download/);
+});

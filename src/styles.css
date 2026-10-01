@@ -117,7 +117,7 @@ footer p{margin:0}
 #sharednote{margin:12px 24px 0;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--pool-tint);font-size:.9rem}
 .nojs-only{display:none}
 .nojs .nojs-only{display:block;margin-top:4px}
-.shared #shareBtn{display:none}
+.shared #shareBtn{display:none}   /* a shared file has no template to share from; the downloaded app does */
 .nojs header .actions,.nojs #viewbar,.nojs #drop,.nojs .linkbtn{display:none}
 .nojs .wrap{max-height:none}
 .sh{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none}   /* fixed: checking it never scrolls the page */
