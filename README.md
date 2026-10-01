@@ -43,6 +43,26 @@ npm test                      # parser tests, Node 18+, no dependencies
 python3 tests/gen_fixtures.py # regenerate synthetic fixtures
 ```
 
+### Testing with real meet files
+
+Real results contain children's names, birth dates and IDs, so they are
+anonymized locally first and never committed:
+
+```sh
+npm run anonymize -- ~/path/to/real-cl2-folder          # one team in the files
+npm run anonymize -- ~/path/to/folder --list-teams      # several teams: see codes (run it yourself)
+npm run anonymize -- ~/path/to/folder --our-team CODE   # ...then pick yours
+```
+
+Swimmers get mixed movie-star names, our team becomes Chicken Cats, other
+teams and meets get fake names, and USS IDs and birth dates are replaced. The
+same swimmer gets the same fake name in every file and on every run, via a
+mapping kept at `~/swim-private/cl2-mapping.json` (`--map` to change; it must
+be outside the repo, since it holds the real names). Output goes to the
+git-ignored `tests/fixtures-private/`, where `npm test` picks it up.
+Before writing anything, the script checks that no real name, ID, team or meet
+appears in the output, and that the app parses every swim identically.
+
 | Path | What it is |
 |---|---|
 | `index.html` | Page markup |
@@ -53,6 +73,7 @@ python3 tests/gen_fixtures.py # regenerate synthetic fixtures
 | `vendor/jszip.min.js` | JSZip 3.10.1, for reading results `.zip` files |
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL), so no font CDN is contacted |
 | `tests/` | Node tests and synthetic fixtures |
+| `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
 | `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
 
 ## Known limitations

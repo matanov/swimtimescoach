@@ -18,6 +18,11 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - `npm test` — parser tests (`node --test`)
 - `npm run serve` — local server on :8000
 - `python3 tests/gen_fixtures.py` — regenerate synthetic fixtures
+- `npm run anonymize -- <folder>` — anonymize real `.cl2` files into git-ignored `tests/fixtures-private/`
+
+## Real data
+- Never open, print or commit real `.cl2` files or `~/swim-private/cl2-mapping.json`; they contain children's names, birth dates and IDs. Work from `tests/fixtures-private/` (anonymized) or synthetic fixtures.
+- `tools/anonymize.js` is an allowlist: a field not listed in `KEEP` is blanked, and unknown record types stop the run. To support a new record type, add its fields from the SDIF spec and a test in `tests/anonymize.test.js`.
 
 ## Parser notes
 - Records are fixed-width, 160 chars; the record code is columns 1–2. Lines may be short (trailing spaces stripped) and are padded before slicing.
