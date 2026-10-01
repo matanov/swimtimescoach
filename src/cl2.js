@@ -11,7 +11,7 @@
 /* ------------------------------------------------------------------ SDIF v3 parsing
    Positions are the spec's 1-based start/length (USA Swimming SDIF v3, 1998). */
 const STROKES = {"1":"Free","2":"Back","3":"Breast","4":"Fly","5":"IM"};
-const STROKE_ORDER = {"1":1,"2":2,"3":3,"4":4,"5":5};
+const ROUND_ORDER = {"Prelim":1,"Swim-off":2,"Final":3};
 const COURSES = {"1":"SCM","S":"SCM","2":"SCY","Y":"SCY","3":"LCM","L":"LCM"};
 const COURSE_ORDER = {SCY:1,SCM:2,LCM:3,"?":4};
 const TIME_RE = /^(?:(\d{1,2}):)?(\d{1,2})\.(\d{2})$/;
@@ -65,7 +65,7 @@ function parseCL2(text, fileLabel){
       meet.start = sdifDate(f(line,122,8)); meet.end = sdifDate(f(line,130,8)) || meet.start;
       meet.course = COURSES[f(line,150,1)] || null;
     } else if (rec === "C1") {
-      team = line.substr(11,6).trim() + (line[149] || "").trim();
+      team = f(line,12,6) + f(line,150,1);
       teams[team] = f(line,18,30) || team;
     } else if (rec === "D0") {
       const name = f(line,12,28);
@@ -99,8 +99,63 @@ function parseCL2(text, fileLabel){
   return {meet, teams, swims};
 }
 
+/* ------------------------------------------------------------------ across files */
+const bestOf = list => list.filter(s => s.time.cs != null).reduce((b,s) => (!b || s.time.cs < b.time.cs) ? s : b, null);
+const bySwimOrder = (a,b) => (a.date||"").localeCompare(b.date||"") || ROUND_ORDER[a.round] - ROUND_ORDER[b.round];
+
+// Identity: normalized name; split same-name swimmers only if their USS IDs differ.
+// Sets s.pkey on every swim and returns key -> person.
+function assignPeople(swims){
+  const byName = new Map();
+  for (const s of swims) {
+    const nk = norm(s.swimmer.last) + "|" + norm(s.swimmer.first);
+    if (!byName.has(nk)) byName.set(nk, new Set());
+    if (s.swimmer.ussNew) byName.get(nk).add(s.swimmer.ussNew.toUpperCase());
+  }
+  const people = new Map();
+  for (const s of swims) {
+    const nk = norm(s.swimmer.last) + "|" + norm(s.swimmer.first);
+    const key = byName.get(nk).size > 1 ? nk + "|" + (s.swimmer.ussNew.toUpperCase() || "?") : nk;
+    s.pkey = key;
+    let p = people.get(key);
+    if (!p) { p = {key, last:s.swimmer.last, first:s.swimmer.pref || s.swimmer.first, teams:new Set(), sex:s.swimmer.sex, count:0, lastAge:null, lastDate:""}; people.set(key, p); }
+    p.teams.add(s.teamName); p.count++;
+    if (s.swimmer.pref) p.first = s.swimmer.pref;
+    if ((s.date||"") >= p.lastDate) { p.lastDate = s.date || ""; p.lastAge = s.age; }
+  }
+  return people;
+}
+
+// Different meets can share a name (the same invitational every year, or two
+// clubs' "Winter Open" on one weekend). They stay separate meets; this sets
+// meet.label so they can be told apart: the name alone if unique, else the
+// first of year, date, city, or file name that distinguishes it.
+// meet.datedLabel is for lists that print the date next to it anyway.
+function labelMeets(meets){
+  const groups = new Map();
+  for (const m of meets) {
+    const k = norm(m.name || m.file);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(m);
+  }
+  const tags = [m => (m.start||"").slice(0,4), m => m.start || "", m => m.city, m => m.file];
+  for (const group of groups.values()) {
+    for (const m of group) {
+      const name = m.name || m.file;
+      m.label = m.datedLabel = name;
+      if (group.length === 1) continue;
+      const i = tags.findIndex(t => t(m) && group.filter(o => t(o) === t(m)).length === 1);
+      const tag = tags[i < 0 ? tags.length-1 : i](m);
+      m.label = `${name} (${tag})`;
+      if (i > 1 || i < 0) m.datedLabel = m.label;
+    }
+  }
+  return meets;
+}
+
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
-              STROKES, STROKE_ORDER, COURSES, COURSE_ORDER };
+              bestOf, bySwimOrder, assignPeople, labelMeets,
+              STROKES, ROUND_ORDER, COURSES, COURSE_ORDER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,19 +1,21 @@
+@font-face{font-family:"Barlow";font-weight:400;font-style:normal;font-display:swap;src:url("../vendor/fonts/barlow-400.woff2") format("woff2")}
+@font-face{font-family:"Barlow";font-weight:500;font-style:normal;font-display:swap;src:url("../vendor/fonts/barlow-500.woff2") format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-style:normal;font-display:swap;src:url("../vendor/fonts/barlow-600.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:500;font-style:normal;font-display:swap;src:url("../vendor/fonts/barlow-condensed-500.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:600;font-style:normal;font-display:swap;src:url("../vendor/fonts/barlow-condensed-600.woff2") format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-style:normal;font-display:swap;src:url("../vendor/fonts/barlow-condensed-700.woff2") format("woff2")}
 :root{
   --bg:#F5F9FA; --surface:#FFFFFF; --ink:#12242E; --muted:#5B6F7A; --line:#D5E2E7;
   --pool:#0B5A7A; --pool-tint:#E3F0F5; --lane:#C23B2E; --lane-tint:#FBEAE7; --hover:#EEF6F9;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
+/* screen only, so printing from dark mode still gets dark ink on white paper */
+@media screen and (prefers-color-scheme: dark){
+  :root{
     --bg:#0E1A21; --surface:#14242D; --ink:#E4EEF2; --muted:#93A8B3; --line:#27404C;
     --pool:#5DB4D6; --pool-tint:#17323F; --lane:#F07A6B; --lane-tint:#3A1F1C; --hover:#1B313C;
     color-scheme: dark;
   }
-}
-:root[data-theme="dark"]{
-  --bg:#0E1A21; --surface:#14242D; --ink:#E4EEF2; --muted:#93A8B3; --line:#27404C;
-  --pool:#5DB4D6; --pool-tint:#17323F; --lane:#F07A6B; --lane-tint:#3A1F1C; --hover:#1B313C;
-  color-scheme: dark;
 }
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -46,16 +48,16 @@ table.grid{border-collapse:separate;border-spacing:0;font-variant-numeric:tabula
 .grid tr.h1 th.cg{background:var(--pool-tint);color:var(--pool);font:700 1rem "Barlow Condensed",sans-serif;border-left:2px solid var(--ink)}
 .grid tr.h2 th{top:var(--h1,31px);font:600 1rem/1.2 "Barlow Condensed",sans-serif;border-bottom:2px solid var(--ink)}
 .grid .gstart{border-left:2px solid var(--ink)}
-.grid th.ev{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;border-right:2px solid var(--ink)}
-.grid th.ev .fn{display:block;font:600 1.05rem/1.15 "Barlow Condensed",sans-serif}
-.grid th.ev .tm{display:block;font-size:.72rem;color:var(--muted);font-weight:400}
-.grid thead th.ev{z-index:3;vertical-align:bottom;color:var(--muted);font:500 .85rem Barlow,sans-serif;border-bottom:2px solid var(--ink)}
+.grid th.sw{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;border-right:2px solid var(--ink)}
+.grid th.sw .fn{display:block;font:600 1.05rem/1.15 "Barlow Condensed",sans-serif}
+.grid th.sw .tm{display:block;font-size:.72rem;color:var(--muted);font-weight:400}
+.grid thead th.sw{z-index:3;vertical-align:bottom;color:var(--muted);font:500 .85rem Barlow,sans-serif;border-bottom:2px solid var(--ink)}
 .grid td{text-align:center;font:600 1.1rem "Barlow Condensed",sans-serif}
 .grid td button{all:unset;cursor:pointer;padding:2px 6px;border-radius:4px}
 .grid td button:hover{background:var(--hover);text-decoration:underline}
 .grid td button:focus-visible{outline:2px solid var(--pool)}
 .grid td .n{display:block;font:400 .7rem Barlow,sans-serif;color:var(--muted)}
-.grid tbody tr:hover td,.grid tbody tr:hover th.ev{background:var(--hover)}
+.grid tbody tr:hover td,.grid tbody tr:hover th.sw{background:var(--hover)}
 
 .empty{padding:40px 24px;text-align:center;color:var(--muted)}
 
@@ -93,7 +95,7 @@ table.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
   #printhead h1{font-size:1.6rem}
   #printhead p{margin:2px 0;color:#444}
   .wrap{overflow:visible;max-height:none;border:none;margin:0}
-  .grid thead th,.grid th.ev{position:static}
+  .grid thead th,.grid th.sw{position:static}
   .grid th,.grid td{font-size:.95em}
   .grid th,.grid td{padding:3px 8px}
   .grid td button{text-decoration:none!important;padding:0}

@@ -11,8 +11,8 @@ cell to see all swims for that event, and print to PDF or download CSV.
 ## Constraints
 - No build step, no framework, no npm runtime dependencies. Plain ES2020 scripts loaded by `index.html`.
 - Everything runs client-side; never send result data anywhere.
-- Third-party code is vendored in `vendor/` (currently JSZip 3.10.1), not loaded from a CDN.
-- `src/cl2.js` must stay usable from both the browser (`window.CL2`) and Node (`require`) so tests can run without a DOM.
+- Third-party code and fonts are vendored in `vendor/` (JSZip 3.10.1, Barlow fonts), not loaded from a CDN.
+- `src/cl2.js` and `src/session.js` must stay usable from both the browser (`window.CL2`, `window.Session`) and Node (`require`) so tests can run without a DOM.
 
 ## Commands
 - `npm test` — parser tests (`node --test`)
@@ -26,6 +26,9 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - D3 follows only the first D0 for a swimmer in a file, so swimmers are shared per file to propagate the preferred name and 14-char USS ID.
 - D0s with no distance/stroke are relay-only swimmer entries and are skipped.
 - Best time = fastest swim with a valid time; DQ/NS/SCR/DNF never count.
+- Meets are never merged by name; `labelMeets` gives same-name meets distinct labels. Show `meet.label` (or `datedLabel` next to a date), not `meet.name`.
+- Saved sessions store the raw file texts, not parsed data, and are re-parsed on open. Bump `VERSION` in `src/session.js` only if `session.json` changes incompatibly.
+- Cross-file logic (`assignPeople`, `bestOf`, `labelMeets`) lives in `src/cl2.js` so it is testable in Node; `src/app.js` is DOM only.
 
 ## Testing changes
 - Add a fixture or extend `tests/gen_fixtures.py` for any parser change, then add a test in `tests/parser.test.js`.

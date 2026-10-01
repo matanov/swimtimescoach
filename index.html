@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Best Times — CL2 Viewer</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
@@ -14,16 +11,18 @@
   <h1>Best Times<small>Load Hy-Tek .cl2 / .sd3 results or the results .zip. Nothing leaves your browser.</small></h1>
   <div class="actions">
     <button class="btn primary" id="addBtn">Add files</button>
+    <button class="btn" id="openBtn" title="Reopen a session saved with Save session">Open session</button>
     <button class="btn" id="pickBtn" disabled>Choose swimmers</button>
     <label class="btn noprint" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="appendixChk"> Include all swims in print</label>
     <button class="btn" id="printBtn" disabled>Print / Save PDF</button>
     <button class="btn" id="csvBtn" disabled>Download CSV</button>
+    <button class="btn" id="saveBtn" disabled title="Download one file with all loaded meets and your selection, to reopen later">Save session</button>
     <button class="btn" id="clearBtn" disabled>Clear</button>
   </div>
   <input type="file" id="fileInput" multiple accept=".cl2,.sd3,.zip,.CL2,.SD3,.ZIP" hidden>
 </header>
 
-<div id="drop"><strong>Drop .cl2 files here</strong> or use Add files. You can add more meets at any time.</div>
+<div id="drop"><strong>Drop .cl2 files or a saved session here</strong> or use Add files. You can add more meets at any time.</div>
 <div id="files"></div>
 <div id="msg" role="status"></div>
 
@@ -65,6 +64,7 @@
 
 <script src="vendor/jszip.min.js"></script>
 <script src="src/cl2.js"></script>
+<script src="src/session.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>
