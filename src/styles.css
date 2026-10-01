@@ -39,6 +39,9 @@ h1 small{display:block;font:500 .95rem/1.4 Barlow,sans-serif;color:var(--muted);
 #drop strong{color:var(--ink)}
 #files{margin:10px 24px 0;font-size:.88rem;color:var(--muted)}
 #files span{display:inline-block;margin-right:14px}
+#files summary{cursor:pointer;width:fit-content;padding:2px 0;font-weight:500}
+#files summary:hover{color:var(--ink)}
+#files details > div{margin-top:4px}
 #msg{margin:8px 24px 0;font-size:.9rem;color:var(--lane)}
 
 .wrap{margin:16px 24px 32px;overflow:auto;max-height:calc(100vh - 220px);border:1px solid var(--line);border-radius:8px;background:var(--surface)}
@@ -109,16 +112,22 @@ footer p{margin:0}
 .help li{margin:4px 0}
 
 /* shared file (tools/build-share.js): a note on top; until scripts run (or where
-   they can't, like phone previews) a static table followed by every swim */
+   they can't, like phone previews) a static table whose times open their history
+   with CSS only: .sh radios are checked by .shcell labels, see staticGrid in app.js */
 #sharednote{margin:12px 24px 0;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--pool-tint);font-size:.9rem}
 .nojs-only{display:none}
 .nojs .nojs-only{display:block;margin-top:4px}
 .shared #shareBtn{display:none}
 .nojs header .actions,.nojs #viewbar,.nojs #drop,.nojs .linkbtn{display:none}
 .nojs .wrap{max-height:none}
-.nojs #appendix{display:block;margin:0 24px 32px}
-.nojs #appendix h2{font:700 1.3rem "Barlow Condensed",sans-serif;margin:18px 0 4px}
-.nojs #appendix h3{font:600 1.05rem "Barlow Condensed",sans-serif;margin:10px 0 2px}
+.sh{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none}   /* fixed: checking it never scrolls the page */
+.shpanel{display:none}
+.sh:checked + .shpanel{display:flex;position:fixed;inset:0;z-index:10;align-items:center;justify-content:center;padding:16px}
+.shback{position:absolute;inset:0;background:rgba(10,25,33,.45);cursor:pointer}
+.shbox{position:relative;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;width:min(720px,94vw);max-height:86vh;overflow:hidden}
+.shcell{cursor:pointer;display:inline-block;padding:2px 6px;border-radius:4px}
+.shcell:hover{background:var(--hover);text-decoration:underline}
+@media print{#sdetails{display:none}}
 
 #printhead,#appendix{display:none}
 

@@ -27,7 +27,7 @@ test("shared page loads nothing from outside and allows only its own scripts", (
 
 test("shared page has each placeholder once, and the data block isn't executable", () => {
   const html = buildTemplate();
-  for (const k of ["date", "files", "wrap", "appendix", "data"])
+  for (const k of ["date", "files", "wrap", "details", "data"])
     assert.equal(html.split(`<!--SHARE:${k}-->`).length - 1, 1, k);
   assert.match(html, /<script type="text\/plain" id="sharedSession"><!--SHARE:data--><\/script>/);
   assert.match(html, /<html lang="en" class="nojs">/);

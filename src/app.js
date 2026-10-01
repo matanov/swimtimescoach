@@ -1,8 +1,10 @@
 /* UI: loading files, swimmer picker, best-times grid, print, CSV export, saved sessions, sharing. */
 (() => {
 "use strict";
-// A shared file starts as "nojs" (static table, every swim listed) until scripts run
+// A shared file starts as "nojs" (static table whose times open their history with
+// CSS only, see staticGrid) until scripts run; then the full app takes over.
 document.documentElement.classList.remove("nojs");
+document.getElementById("sdetails")?.remove();
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets,
         pairedDist, columnLabel, courseBests, trimToSwimmers, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
@@ -116,8 +118,25 @@ function loadShareTemplate(){
   });
 }
 
+// Previews (WhatsApp, Mail, Quick Look) often don't run scripts, so the shared file also
+// works with HTML and CSS alone: each time is a <label> for a hidden radio button, and
+// the checked radio's panel shows that swim history as a dialog. Closing checks "sh0".
+function staticGrid(){
+  const wrap = $("wrap").cloneNode(true), events = $("wrap")._events;
+  let details = `<input type="radio" name="sh" id="sh0" class="sh" checked>`, n = 0;
+  for (const b of wrap.querySelectorAll("button[data-ev]")) {
+    const e = events.get(b.dataset.ev), p = state.people.get(b.dataset.p), list = e.by.get(b.dataset.p);
+    const id = "sh" + ++n, label = document.createElement("label");
+    label.htmlFor = id; label.className = "shcell"; label.innerHTML = b.innerHTML;
+    b.replaceWith(label);
+    details += `<input type="radio" name="sh" id="${id}" class="sh"><div class="shpanel"><label for="sh0" class="shback"></label>` +
+      `<div class="shbox" role="dialog"><div class="dhead"><div><h2>${esc(eventTitle(e))}</h2><p>${esc(p.first)} ${esc(p.last)} — ${list.length} swim${list.length > 1 ? "s" : ""}</p></div>` +
+      `<label for="sh0" class="btn">Close</label></div><div class="dbody">${historyTable(list)}</div></div></div>`;
+  }
+  return {wrap: wrap.innerHTML, details};
+}
+
 // One .html file with the app and only the selected swimmers, opened by tapping it.
-// The table and every swim are also written in as plain HTML for previews that don't run scripts.
 async function shareFile(){
   try {
     if (!state.selected.size) throw new Error("choose at least one swimmer first");
@@ -129,7 +148,7 @@ async function shareFile(){
     const parts = {
       date: esc(fmtDate(today)), data: toBase64(bytes),
       files: meetList(labelMeets(sources.map(s => parseCL2(s.text, s.name).meet))),
-      wrap: $("wrap").innerHTML, appendix: $("appendix").innerHTML,
+      ...staticGrid(),
     };
     // the placeholder pattern is split so this script's own text never matches it
     const html = template.replace(new RegExp("<" + "!--SHARE:(\\w+)--" + ">", "g"), (_, k) => parts[k] ?? "");
@@ -146,11 +165,20 @@ const eventTitle = e => e.course ? `${e.label} ${e.course}` : e.label;
 const noTime = list => list[0].time.dq ? "DQ" : (list[0].time.code || "—");
 const fmtDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"}) : "";
 
-const meetList = meets => meets.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""))
-  .map(m => `<span>${esc(m.datedLabel)}${m.start ? " (" + esc(fmtDate(m.start)) + ")" : ""}</span>`).join("");
+// Collapsed to one line ("18 meets · Sep 6, 2025 – Feb 28, 2026") to save room on phones.
+// <details> opens without scripts, so this works in shared-file previews too.
+function meetList(meets, open = false){
+  if (!meets.length) return "";
+  const sorted = meets.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+  const dates = sorted.map(m => m.start).filter(Boolean);
+  const span = !dates.length ? "" : " · " + fmtDate(dates[0]) + (dates.length > 1 && dates.at(-1) !== dates[0] ? " – " + fmtDate(dates.at(-1)) : "");
+  return `<details class="meets"${open ? " open" : ""}><summary>${sorted.length} meet${sorted.length > 1 ? "s" : ""}${esc(span)}</summary><div>` +
+    sorted.map(m => `<span>${esc(m.datedLabel)}${m.start ? " (" + esc(fmtDate(m.start)) + ")" : ""}</span>`).join("") + `</div></details>`;
+}
 
 function renderFiles(){
-  document.getElementById("files").innerHTML = meetList(state.files);
+  const el = document.getElementById("files");
+  el.innerHTML = meetList(state.files, el.querySelector("details")?.open);   // keep it open if the user opened it
   const has = state.swims.length > 0;
   for (const id of ["pickBtn","printBtn","csvBtn","saveBtn","shareBtn","clearBtn"]) document.getElementById(id).disabled = !has;
   document.getElementById("drop").style.display = has ? "none" : "";

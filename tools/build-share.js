@@ -53,11 +53,11 @@ function buildTemplate(){
   html = replaceOnce(html, '<link rel="stylesheet" href="src/styles.css">', `<style>\n${css}</style>`);
   html = replaceOnce(html, "<body>", `<body class="shared">
 <div id="sharednote"><b>Shared best times</b>, made with swimtimescoach.com on <!--SHARE:date-->. Everything in this file stays on your device.
-  <span class="nojs-only">Can't tap the times? Open this file in a web browser, or go to <b>swimtimescoach.com</b>, tap <b>Open session</b> and choose this file.</span></div>`);
+  <span class="nojs-only">Tap a time to see every swim. To switch views, pick swimmers or add meets, open this file in a web browser, or go to <b>swimtimescoach.com</b>, tap <b>Open session</b> and choose this file.</span></div>`);
   html = replaceOnce(html, '<div id="files"></div>', '<div id="files"><!--SHARE:files--></div>');
   html = replaceOnce(html, '<div class="wrap" id="wrap"><div class="empty">No results loaded yet.</div></div>',
     '<div class="wrap" id="wrap"><!--SHARE:wrap--></div>');
-  html = replaceOnce(html, '<div id="appendix"></div>', '<div id="appendix"><!--SHARE:appendix--></div>');
+  html = replaceOnce(html, '<div id="appendix"></div>', '<div id="appendix"></div>\n<div id="sdetails"><!--SHARE:details--></div>');
   SCRIPTS.forEach((p, i) => {
     const data = i === 0 ? '<script type="text/plain" id="sharedSession"><!--SHARE:data--></script>\n' : "";
     html = replaceOnce(html, `<script src="${p}"></script>`, `${data}<script>${scripts[i]}</script>`);
