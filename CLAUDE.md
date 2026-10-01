@@ -18,6 +18,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - `npm test` — parser tests (`node --test`)
 - `npm run serve` — local server on 127.0.0.1:8000 (localhost only)
 - `python3 tests/gen_fixtures.py` — regenerate synthetic fixtures
+- `npm run build-share` — build git-ignored `src/share-template.js` (CI does this before deploy; "Share as file" needs it locally)
 - `npm run anonymize -- <folder>` — anonymize real `.cl2` files into git-ignored `tests/fixtures-private/`
 
 ## Real data
@@ -35,6 +36,10 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - Meets are never merged by name; `labelMeets` gives same-name meets distinct labels. Show `meet.label` (or `datedLabel` next to a date), not `meet.name`.
 - Saved sessions store the raw file texts, not parsed data, and are re-parsed on open. Bump `VERSION` in `src/session.js` only if `session.json` changes incompatibly.
 - Cross-file logic (`assignPeople`, `bestOf`, `labelMeets`) lives in `src/cl2.js` so it is testable in Node; `src/app.js` is DOM only.
+
+## Share as file
+- `tools/build-share.js` inlines index.html, styles, fonts and scripts into one template; it fails loudly if the index.html snippets it replaces change. App scripts must not contain `<!--` (breaks inline script parsing); `</script` is escaped automatically.
+- A shared file must contain only the selected swimmers: data goes through `trimToSwimmers`, and `shareFile` re-renders before copying the static table and swim list.
 
 ## Docs
 - The in-app help (`#help` dialog in `index.html`) and the README user guide say the same things; update both when behavior changes.

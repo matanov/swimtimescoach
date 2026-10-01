@@ -178,9 +178,35 @@ function courseBests(list){
   return out;
 }
 
+/* ------------------------------------------------------------------ sharing
+   A shared file carries only the chosen swimmers: their D0/D3 records, plus
+   the meet (B1) record and the team (C1) records of teams they swim for.
+   Relays, splits, contacts and every other swimmer are left out. keys are
+   person keys from assignPeople; a same-name swimmer split by USS ID is kept
+   with its namesake. Returns "" when none of them swam an individual event. */
+function trimToSwimmers(text, keys){
+  const names = new Set([...keys].map(k => k.split("|").slice(0, 2).join("|")));
+  const out = [];
+  let team = null, keepD3 = false, swims = 0;
+  for (const raw of text.split(/\r?\n/)) {
+    const rec = raw.slice(0, 2), line = raw.padEnd(160);
+    if (rec === "B1") out.push(raw);
+    else if (rec === "C1") team = raw;
+    else if (rec === "D0") {
+      const n = splitName(f(line, 12, 28));
+      keepD3 = names.has(norm(n.last) + "|" + norm(n.first));
+      if (!keepD3) continue;
+      if (team) { out.push(team); team = null; }
+      out.push(raw);
+      if (int(f(line, 68, 4))) swims++;
+    } else if (rec === "D3" && keepD3) out.push(raw);
+  }
+  return swims ? out.join("\r\n") + "\r\n" : "";
+}
+
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              pairedDist, columnLabel, courseBests,
+              pairedDist, columnLabel, courseBests, trimToSwimmers,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

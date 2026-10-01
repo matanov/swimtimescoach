@@ -1,8 +1,10 @@
-/* UI: loading files, swimmer picker, best-times grid, print, CSV export, saved sessions. */
+/* UI: loading files, swimmer picker, best-times grid, print, CSV export, saved sessions, sharing. */
 (() => {
 "use strict";
+// A shared file starts as "nojs" (static table, every swim listed) until scripts run
+document.documentElement.classList.remove("nojs");
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets,
-        pairedDist, columnLabel, courseBests, STROKES, COURSE_ORDER } = window.CL2;
+        pairedDist, columnLabel, courseBests, trimToSwimmers, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -21,6 +23,24 @@ function decode(bytes){
   catch { return new TextDecoder("windows-1252").decode(bytes); }
 }
 
+const fromBase64 = b64 => Uint8Array.from(atob(b64.trim()), c => c.charCodeAt(0));
+function toBase64(bytes){
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+// A page made with "Share as file" carries its swimmers as a base64 session zip.
+// Returns those zip bytes, or null if buf isn't an HTML page.
+function sharedSessionIn(buf){
+  const head = decode(new Uint8Array(buf.slice(0, 64))).trimStart().toLowerCase();
+  if (!head.startsWith("<!doctype html") && !head.startsWith("<html")) return null;
+  const text = decode(new Uint8Array(buf)), marker = 'id="sharedSession">';
+  const i = text.indexOf(marker);
+  if (i < 0) throw new Error("this page has no shared results in it");
+  return fromBase64(text.slice(i + marker.length, text.indexOf("<", i + marker.length)));
+}
+
 async function addFiles(fileList){
   const msg = document.getElementById("msg"); msg.textContent = "";
   const problems = [];
@@ -29,7 +49,9 @@ async function addFiles(fileList){
   for (const file of fileList) {
     try {
       const entries = [];   // [name, text]
-      const buf = await file.arrayBuffer();
+      let buf = await file.arrayBuffer();
+      const shared = sharedSessionIn(buf);
+      if (shared) buf = shared.buffer;
       const head = new Uint8Array(buf.slice(0,2));
       let session = null;
       if (head[0] === 0x50 && head[1] === 0x4B) {
@@ -81,6 +103,42 @@ async function saveSessionFile(){
   } catch (e) { $("msg").textContent = `Couldn't save the session: ${e.message}`; }
 }
 
+/* ------------------------------------------------------------------ share as file */
+// The whole app as one HTML string, built by tools/build-share.js; loaded on first use.
+function loadShareTemplate(){
+  if (window.SHARE_TEMPLATE) return Promise.resolve(window.SHARE_TEMPLATE);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "src/share-template.js";
+    s.onload = () => window.SHARE_TEMPLATE ? resolve(window.SHARE_TEMPLATE) : reject(new Error("the share template is empty"));
+    s.onerror = () => reject(new Error("sharing isn't set up in this copy (run npm run build-share)"));
+    document.head.append(s);
+  });
+}
+
+// One .html file with the app and only the selected swimmers, opened by tapping it.
+// The table and every swim are also written in as plain HTML for previews that don't run scripts.
+async function shareFile(){
+  try {
+    if (!state.selected.size) throw new Error("choose at least one swimmer first");
+    const template = await loadShareTemplate();
+    render();   // the static table and swim list below must match the current selection
+    const sources = state.sources.map(s => ({name: s.name, text: trimToSwimmers(s.text, state.selected)})).filter(s => s.text);
+    const bytes = await saveSession(JSZip, {sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view});
+    const today = new Date().toISOString().slice(0, 10);
+    const parts = {
+      date: esc(fmtDate(today)), data: toBase64(bytes),
+      files: meetList(labelMeets(sources.map(s => parseCL2(s.text, s.name).meet))),
+      wrap: $("wrap").innerHTML, appendix: $("appendix").innerHTML,
+    };
+    // the placeholder pattern is split so this script's own text never matches it
+    const html = template.replace(new RegExp("<" + "!--SHARE:(\\w+)--" + ">", "g"), (_, k) => parts[k] ?? "");
+    const people = selectedPeople();
+    const who = people.length === 1 ? ("-" + people[0].first + "-" + people[0].last).toLowerCase().replace(/[^a-z0-9-]+/g, "") : "";
+    download(new Blob([html], {type: "text/html"}), `best-times${who}-${today}.html`);
+  } catch (e) { $("msg").textContent = `Couldn't make the shared file: ${e.message}`; }
+}
+
 /* ------------------------------------------------------------------ rendering */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const eventLabel = (dist, stroke) => `${dist} ${STROKES[stroke]}`;
@@ -88,12 +146,13 @@ const eventTitle = e => e.course ? `${e.label} ${e.course}` : e.label;
 const noTime = list => list[0].time.dq ? "DQ" : (list[0].time.code || "—");
 const fmtDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"}) : "";
 
+const meetList = meets => meets.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""))
+  .map(m => `<span>${esc(m.datedLabel)}${m.start ? " (" + esc(fmtDate(m.start)) + ")" : ""}</span>`).join("");
+
 function renderFiles(){
-  const el = document.getElementById("files");
-  el.innerHTML = state.files.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""))
-    .map(m => `<span>${esc(m.datedLabel)}${m.start ? " (" + esc(fmtDate(m.start)) + ")" : ""}</span>`).join("");
+  document.getElementById("files").innerHTML = meetList(state.files);
   const has = state.swims.length > 0;
-  for (const id of ["pickBtn","printBtn","csvBtn","saveBtn","clearBtn"]) document.getElementById(id).disabled = !has;
+  for (const id of ["pickBtn","printBtn","csvBtn","saveBtn","shareBtn","clearBtn"]) document.getElementById(id).disabled = !has;
   document.getElementById("drop").style.display = has ? "none" : "";
   document.getElementById("viewbar").hidden = !has;
 }
@@ -297,6 +356,7 @@ const $ = id => document.getElementById(id);
 $("addBtn").onclick = () => $("fileInput").click();
 $("openBtn").onclick = () => $("fileInput").click();
 $("saveBtn").onclick = saveSessionFile;
+$("shareBtn").onclick = shareFile;
 $("fileInput").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
 $("pickBtn").onclick = openPicker;
 const openHelp = () => $("help").showModal();
@@ -322,4 +382,8 @@ const drop = $("drop");
 // relatedTarget is null when the drag leaves the window
 ["dragleave","drop"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); if (t === "drop" || !e.relatedTarget) drop.classList.remove("over"); }));
 document.addEventListener("drop", e => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+
+// Opening a shared file (see shareFile) loads its swimmers straight away
+const embedded = $("sharedSession");
+if (embedded) addFiles([new File([fromBase64(embedded.textContent)], "shared-session.zip")]);
 })();

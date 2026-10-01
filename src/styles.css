@@ -108,13 +108,25 @@ footer p{margin:0}
 .help ul,.help ol{margin:0 0 10px;padding-left:1.2em}
 .help li{margin:4px 0}
 
+/* shared file (tools/build-share.js): a note on top; until scripts run (or where
+   they can't, like phone previews) a static table followed by every swim */
+#sharednote{margin:12px 24px 0;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--pool-tint);font-size:.9rem}
+.nojs-only{display:none}
+.nojs .nojs-only{display:block;margin-top:4px}
+.shared #shareBtn{display:none}
+.nojs header .actions,.nojs #viewbar,.nojs #drop,.nojs .linkbtn{display:none}
+.nojs .wrap{max-height:none}
+.nojs #appendix{display:block;margin:0 24px 32px}
+.nojs #appendix h2{font:700 1.3rem "Barlow Condensed",sans-serif;margin:18px 0 4px}
+.nojs #appendix h3{font:600 1.05rem "Barlow Condensed",sans-serif;margin:10px 0 2px}
+
 #printhead,#appendix{display:none}
 
 @media print{
   @page{size:landscape;margin:12mm}
   :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#bbb;--pool:#0B5A7A;--pool-tint:#E3F0F5;--lane:#B0281B;--lane-tint:#fff;padding:0}
   body{background:#fff;font-size:11px}
-  header,#drop,#files,#msg,dialog,.noprint{display:none!important}
+  header,#drop,#files,#msg,#sharednote,dialog,.noprint{display:none!important}
   #printhead{display:block;margin:0 0 8px}
   #printhead h1{font-size:1.6rem}
   #printhead p{margin:2px 0;color:#444}

@@ -20,9 +20,10 @@
     <button class="btn" id="printBtn" disabled>Print / Save PDF</button>
     <button class="btn" id="csvBtn" disabled>Download CSV</button>
     <button class="btn" id="saveBtn" disabled title="Download one file with all loaded meets and your selection, to reopen later">Save session</button>
+    <button class="btn" id="shareBtn" disabled title="Download one .html file with the selected swimmers that anyone can open by tapping it">Share as file</button>
     <button class="btn" id="clearBtn" disabled>Clear</button>
   </div>
-  <input type="file" id="fileInput" multiple accept=".cl2,.sd3,.zip,.CL2,.SD3,.ZIP" hidden>
+  <input type="file" id="fileInput" multiple accept=".cl2,.sd3,.zip,.html,.htm,.CL2,.SD3,.ZIP,.HTML,.HTM" hidden>
 </header>
 
 <div id="drop"><strong>Drop .cl2 files or a saved session here</strong> or use Add files. You can add more meets at any time.
@@ -94,6 +95,7 @@
         <li><b>Save session</b> downloads one .zip with every meet you've loaded, the swimmers you picked and the current view. Later, <b>Open session</b> (or drop the file on the page) picks up where you left off.</li>
         <li><b>Print / Save PDF</b> prints the table in landscape. Tick <b>Include all swims in print</b> to add every swim after the table.</li>
         <li><b>Download CSV</b> gives the best times and every swim, for spreadsheets.</li>
+        <li><b>Share as file</b> makes one .html file with just the swimmers you picked, to send by WhatsApp or email. Whoever gets it taps it to see the table, with no website or upload. If their phone only shows a preview, they can open swimtimescoach.com, tap <b>Open session</b> and choose the file.</li>
       </ul>
     </section>
   </div>

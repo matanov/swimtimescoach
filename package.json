@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "serve": "python3 -m http.server 8000 --bind 127.0.0.1",
-    "anonymize": "node tools/anonymize.js"
+    "anonymize": "node tools/anonymize.js",
+    "build-share": "node tools/build-share.js"
   }
 }

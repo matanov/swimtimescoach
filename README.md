@@ -81,6 +81,14 @@ team, "400/500 Free" when both appear).
   in print** to add every swim after the table.
 - **Download CSV** gives the best-times table and every individual swim, for
   spreadsheets. It follows the current view.
+- **Share as file** makes one `.html` file with just the swimmers you picked,
+  to send by WhatsApp or email. The receiver taps it and the table opens in
+  their browser: no website, no upload, fully interactive. It contains only
+  those swimmers' individual results (no relays, splits or other swimmers).
+  Where a phone only shows a preview without running scripts, the file still
+  shows the best-times table and every swim; for the interactive version,
+  open swimtimescoach.com, tap **Open session** and choose the file. Expect
+  about 1 MB for a 70-swimmer team, under 300 KB for one swimmer.
 
 ### Good to know
 - Swimmers are matched across meets by name. If a name is spelled differently
@@ -99,10 +107,16 @@ dependencies. Third-party code and fonts are vendored in `vendor/`.
 npm test                      # all tests, Node 18+, no dependencies
 python3 tests/gen_fixtures.py # regenerate synthetic fixtures
 npm run serve                 # local server on 127.0.0.1:8000
+npm run build-share           # build src/share-template.js, needed for "Share as file"
 ```
 
 Every push to `main` runs the tests and, if they pass, publishes `index.html`,
-`src/` and `vendor/` to GitHub Pages (`.github/workflows/pages.yml`).
+`src/` and `vendor/` to GitHub Pages (`.github/workflows/pages.yml`), after
+building `src/share-template.js`. That file is the whole app as one HTML
+string for **Share as file**; it's generated and git-ignored, because the
+page's CSP stops it from reading its own files at run time. The shared page
+has its own CSP: only its exact inline scripts (by SHA-256 hash), embedded
+fonts, no network.
 
 Privacy rules for changes: keep the Content Security Policy in `index.html`
 as strict as it is (in particular `connect-src 'none'`), load nothing from
@@ -119,6 +133,7 @@ other sites, and don't store result data in the browser.
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
 | `tests/` | Node tests and synthetic fixtures |
 | `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
+| `tools/build-share.js` | Builds the one-file template used by **Share as file** |
 | `docs/sdif-v3-notes.md` | Record layouts the parser relies on |
 
 ### Testing with real meet files
