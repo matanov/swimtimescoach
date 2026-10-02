@@ -42,11 +42,14 @@
     <button type="button" data-view="course" aria-pressed="true">By course</button>
     <button type="button" data-view="event" aria-pressed="false">By event (SC + LC)</button>
   </div>
+  <label class="qualchk"><input type="checkbox" id="efslChk"> EFSL quals</label>
+  <span id="qlegend" class="qlegend" hidden><span class="q q-ld">Long Distance</span> <span class="q q-sd">Short Distance</span> EFSL qualifying times, at each swimmer's latest age</span>
 </div>
 
 <div id="printhead">
   <h1 id="phTitle">Best Times</h1>
   <p id="phMeets"></p>
+  <p id="phQual"></p>
   <p id="phDate"></p>
 </div>
 
@@ -92,6 +95,7 @@
         <li><b>By event (SC + LC)</b> puts each event in one column, short course best over long course best. Letters show the course: <b>Y</b> yards, <b>S</b> short course meters, <b>L</b> long course meters. <b>—SC</b> or <b>—LC</b> means no swim in that course; a blank cell means no swims at all.</li>
         <li>Yards and meters times are never compared, so each course keeps its own best. 500/1000/1650 yards free share a column with 400/800/1500 meters.</li>
         <li>DQ, NS, SCR and DNF never count as a best time.</li>
+        <li>Tick <b>EFSL quals</b> to box times that meet the European Forces Swim League 2025–2028 championship standards: a solid box for Long Distance Champs, dashed for Short Distance Champs. Each swim is judged at the swimmer's latest age, so a time that met last year's standard counts only if it also meets this one. Equal to the standard counts. Short course and long course meters only.</li>
         <li>Swimmers are matched across meets by name. If a name is spelled differently in two meets, they show as two people.</li>
       </ul>
     </section>
@@ -158,6 +162,7 @@
 <script src="vendor/jszip.min.js"></script>
 <script src="src/cl2.js"></script>
 <script src="src/session.js"></script>
+<script src="src/standards-efsl.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>

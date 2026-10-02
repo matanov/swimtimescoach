@@ -7,6 +7,7 @@
 :root{
   --bg:#F5F9FA; --surface:#FFFFFF; --ink:#12242E; --muted:#5B6F7A; --line:#D5E2E7;
   --pool:#0B5A7A; --pool-tint:#E3F0F5; --lane:#C23B2E; --lane-tint:#FBEAE7; --hover:#EEF6F9;
+  --qld:#1F6FD1; --qsd:#7A4CC2;   /* EFSL quals: Long Distance blue, Short Distance purple, as in EFSL's tables */
   color-scheme: light;
 }
 /* screen only, so printing from dark mode still gets dark ink on white paper */
@@ -14,6 +15,7 @@
   :root{
     --bg:#0E1A21; --surface:#14242D; --ink:#E4EEF2; --muted:#93A8B3; --line:#27404C;
     --pool:#5DB4D6; --pool-tint:#17323F; --lane:#F07A6B; --lane-tint:#3A1F1C; --hover:#1B313C;
+    --qld:#6AA8F5; --qsd:#B795F0;
     color-scheme: dark;
   }
 }
@@ -64,6 +66,15 @@ table.grid{border-collapse:separate;border-spacing:0;font-variant-numeric:tabula
 
 #viewbar{display:flex;align-items:center;gap:10px;margin:12px 24px 0;font-size:.88rem;color:var(--muted)}
 #viewbar[hidden]{display:none}
+#viewbar{flex-wrap:wrap}
+.qualchk{display:inline-flex;align-items:center;gap:6px;color:var(--ink);cursor:pointer}
+/* EFSL quals: solid box = Long Distance, dashed = Short Distance (also readable in black and white) */
+.q{border:2px solid var(--qld);border-radius:5px;padding:0 4px}
+.q-sd{border-color:var(--qsd);border-style:dashed}
+.grid td .ct .q{display:inline-block;margin:2px 0;line-height:1.1}   /* stacked SC/LC boxes don't touch */
+.qlegend .q{font:500 .78rem Barlow,sans-serif;padding:0 5px;margin-right:4px}
+.qlegend[hidden]{display:none}
+#files .qlegend{margin:6px 0 0}
 #files summary b{color:var(--ink);font-weight:600}
 #files .teamchange{display:block;margin-top:6px}
 #teamPick{width:min(480px,94vw)}
@@ -137,7 +148,7 @@ footer p{margin:0}
 
 @media print{
   @page{size:landscape;margin:12mm}
-  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#bbb;--pool:#0B5A7A;--pool-tint:#E3F0F5;--lane:#B0281B;--lane-tint:#fff;padding:0}
+  :root{--qld:#1F6FD1;--qsd:#7A4CC2;--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#bbb;--pool:#0B5A7A;--pool-tint:#E3F0F5;--lane:#B0281B;--lane-tint:#fff;padding:0}
   body{background:#fff;font-size:11px}
   header,#drop,#files,#msg,#sharednote,dialog,.noprint{display:none!important}
   #printhead{display:block;margin:0 0 8px}

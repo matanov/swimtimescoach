@@ -17,12 +17,12 @@ test("shared page loads nothing from outside and allows only its own scripts", (
   assert.match(csp, /default-src 'none'/);
   assert.match(csp, /connect-src 'none'/);
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-  assert.equal(scripts.length, 4);
+  assert.equal(scripts.length, 5);
   for (const js of scripts) {
     const hash = crypto.createHash("sha256").update(js, "utf8").digest("base64");
     assert.ok(csp.includes(`'sha256-${hash}'`), "inline script not allowed by the CSP hash list");
   }
-  assert.equal((csp.match(/'sha256-/g) || []).length, 4);
+  assert.equal((csp.match(/'sha256-/g) || []).length, 5);
   assert.doesNotMatch(html, /\bsrc="(?!data:)/);                 // nothing loaded from outside
   assert.doesNotMatch(html, /<link\b/);
   assert.doesNotMatch(html, /\bhref="(?!https:\/\/|#)/);           // only plain web links

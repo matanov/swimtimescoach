@@ -17,7 +17,7 @@ if (isDownloadedApp) {
 document.documentElement.classList.remove("nojs");
 document.getElementById("sdetails")?.remove();
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, listTeams,
-        pairedDist, columnLabel, courseBests, trimToSwimmers, STROKES, COURSE_ORDER } = window.CL2;
+        pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -25,7 +25,8 @@ const { saveSession, readSession } = window.Session;
 // view: "course" = a column per event per course; "event" = one column per event, SC and LC times stacked
 // team: the app is for one team. When the files hold several, the user picks theirs (a team
 // code) and everything shows only that team's swims; null when there's one team, or no pick.
-const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map(), view: "course", team: null };
+// efsl: box times that meet an EFSL championship standard (src/standards-efsl.js)
+const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map(), view: "course", team: null, efsl: false };
 const seenText = new Set();
 
 const teamSwims = () => state.team ? state.swims.filter(s => s.team === state.team) : state.swims;
@@ -120,6 +121,7 @@ function finishLoad(restored = []){
     r.selected.forEach(k => { if (state.people.has(k)) state.selected.add(k); });
     if (r.appendix) $("appendixChk").checked = true;
     if (r.view) setView(r.view, false);
+    if (r.efsl) setEfsl(true, false);
   }
   document.body.classList.toggle("with-appendix", $("appendixChk").checked);
   if (!state.selected.size) {
@@ -152,7 +154,7 @@ function closeTeamPicker(code){
 
 async function saveSessionFile(){
   try {
-    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team});
+    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team, efsl: state.efsl});
     download(new Blob([bytes], {type:"application/zip"}), `best-times-session-${new Date().toISOString().slice(0,10)}.zip`);
   } catch (e) { $("msg").textContent = `Couldn't save the session: ${e.message}`; }
 }
@@ -183,7 +185,7 @@ function staticGrid(){
     b.replaceWith(label);
     details += `<input type="radio" name="sh" id="${id}" class="sh"><div class="shpanel"><label for="sh0" class="shback"></label>` +
       `<div class="shbox" role="dialog"><div class="dhead"><div><h2>${esc(eventTitle(e))}</h2><p>${esc(p.first)} ${esc(p.last)} — ${list.length} swim${list.length > 1 ? "s" : ""}</p></div>` +
-      `<label for="sh0" class="btn">Close</label></div><div class="dbody">${historyTable(list)}</div></div></div>`;
+      `<label for="sh0" class="btn">Close</label></div><div class="dbody">${historyTable(list, p)}</div></div></div>`;
   }
   return {wrap: wrap.innerHTML, details};
 }
@@ -195,11 +197,12 @@ async function shareFile(){
     const template = await loadShareTemplate();
     render();   // the static table and swim list below must match the current selection
     const sources = state.sources.map(s => ({name: s.name, text: trimToSwimmers(s.text, state.selected, state.team)})).filter(s => s.text);
-    const bytes = await saveSession(JSZip, {sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team});
+    const bytes = await saveSession(JSZip, {sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team, efsl: state.efsl});
     const today = new Date().toISOString().slice(0, 10);
     const parts = {
       date: esc(fmtDate(today)), data: toBase64(bytes),
-      files: meetList(labelMeets(sources.map(s => parseCL2(s.text, s.name).meet))),
+      // the legend rides along with the meet line, since previews can't show the Columns bar
+      files: meetList(labelMeets(sources.map(s => parseCL2(s.text, s.name).meet))) + (state.efsl ? `<p class="qlegend">${$("qlegend").innerHTML}</p>` : ""),
       ...staticGrid(),
     };
     // the placeholder pattern is split so this script's own text never matches it
@@ -300,7 +303,7 @@ function render(){
       const list = e.by.get(p.key);
       if (!list) { h += `<td${cls}></td>`; return; }
       const b = bestOf(list);
-      const times = byEvent ? stackedTimes(list) : esc(b ? fmt(b.time.cs) : noTime(list));
+      const times = byEvent ? stackedTimes(list, p) : b ? qbox(esc(fmt(b.time.cs)), b, p) : esc(noTime(list));
       h += `<td${cls}><button data-ev="${esc(ek)}" data-p="${esc(p.key)}" aria-label="All ${esc(eventTitle(e))} swims for ${esc(p.first)} ${esc(p.last)}">${times}${list.length > 1 ? `<span class="n">${list.length} swims</span>` : ""}</button></td>`;
     });
     h += `</tr>`;
@@ -315,12 +318,26 @@ function render(){
 
 // Event view cell: the short-course best(s) then the long-course best, each with
 // its course letter (24.51Y, 26.10S, 28.30L); a course with no swims shows —SC / —LC.
-function stackedTimes(list){
+function stackedTimes(list, p){
   const {short, long} = courseBests(list);
   const line = (entries, missing) => entries.length
-    ? entries.map(x => `<span class="ct">${esc(x.best ? fmt(x.best.time.cs) : noTime(x.swims))}<i>${x.letter}</i></span>`).join("")
+    ? entries.map(x => `<span class="ct">${x.best ? qbox(esc(fmt(x.best.time.cs)), x.best, p) : esc(noTime(x.swims))}<i>${x.letter}</i></span>`).join("")
     : `<span class="ct miss">${missing}</span>`;
   return line(short, "—SC") + line(long, "—LC");
+}
+
+// EFSL quals: a time that meets a championship standard, at the swimmer's latest age,
+// gets a box: solid for Long Distance, dashed for Short Distance (styles.css .q).
+const QUAL = {"long-distance": ["q-ld", "Long Distance"], "short-distance": ["q-sd", "Short Distance"]};
+function qbox(html, s, p){
+  const c = state.efsl && p ? qualifyingChamp(window.EFSL, s, p.lastAge, p.sex) : null;
+  return c ? `<span class="q ${QUAL[c][0]}" title="Meets the EFSL ${QUAL[c][1]} standard for age ${p.lastAge}">${html}</span>` : html;
+}
+function setEfsl(on, rerender = true){
+  state.efsl = !!on;
+  $("efslChk").checked = state.efsl;
+  $("qlegend").hidden = !state.efsl;
+  if (rerender) render();
 }
 
 function setView(view, rerender = true){
@@ -330,7 +347,7 @@ function setView(view, rerender = true){
 }
 
 // Best is per course: yards and meters times aren't comparable.
-function historyTable(list){
+function historyTable(list, p){
   const courses = [...new Set(list.map(s => s.course))];
   const bests = new Map(courses.map(c => [c, bestOf(list.filter(s => s.course === c))]));
   const showCourse = courses.length > 1;
@@ -340,9 +357,9 @@ function historyTable(list){
   for (const s of sorted) {
     const best = bests.get(s.course);
     const isBest = s === best;
-    const t = s.time.cs != null ? fmt(s.time.cs) : (s.time.dq ? "DQ" : (s.time.code || s.time.raw));
+    const t = s.time.cs != null ? qbox(esc(fmt(s.time.cs)), s, p) : esc(s.time.dq ? "DQ" : (s.time.code || s.time.raw));
     const diff = (!isBest && best && s.time.cs != null) ? ` <span style="color:var(--muted);font:400 .8rem Barlow">+${fmt(s.time.cs - best.time.cs)}</span>` : "";
-    h += `<tr class="${isBest ? "best" : ""}"><td class="d">${esc(fmtDate(s.date))}</td><td>${esc(s.meet.label)}</td><td>${esc(s.round)}</td>${showCourse ? `<td>${showDist ? s.dist + " " : ""}${esc(s.course)}</td>` : ""}<td class="t">${esc(t)}${isBest ? `<span class="badge">Best</span>` : ""}${diff}</td><td>${s.place ?? ""}</td><td>${s.age ?? ""}</td></tr>`;
+    h += `<tr class="${isBest ? "best" : ""}"><td class="d">${esc(fmtDate(s.date))}</td><td>${esc(s.meet.label)}</td><td>${esc(s.round)}</td>${showCourse ? `<td>${showDist ? s.dist + " " : ""}${esc(s.course)}</td>` : ""}<td class="t">${t}${isBest ? `<span class="badge">Best</span>` : ""}${diff}</td><td>${s.place ?? ""}</td><td>${s.age ?? ""}</td></tr>`;
   }
   return h + `</tbody></table>`;
 }
@@ -353,7 +370,7 @@ function openDetail(ek, pk){
   const list = e.by.get(pk);
   document.getElementById("dTitle").textContent = eventTitle(e);
   document.getElementById("dSub").textContent = `${p.first} ${p.last} — ${list.length} swim${list.length > 1 ? "s" : ""}`;
-  document.getElementById("dBody").innerHTML = historyTable(list);
+  document.getElementById("dBody").innerHTML = historyTable(list, p);
   document.getElementById("detail").showModal();
 }
 
@@ -363,6 +380,7 @@ function renderPrintHead(){
     : state.team ? `Best times: ${teamName(state.team)}` : "Best times";
   const meets = teamMeets().slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
   document.getElementById("phMeets").textContent = `From ${meets.length} meet${meets.length>1?"s":""}: ` + meets.map(m => `${m.datedLabel}${m.start ? " (" + fmtDate(m.start) + ")" : ""}`).join("; ");
+  document.getElementById("phQual").textContent = state.efsl ? "Boxed times meet EFSL 2025–2028 championship standards at each swimmer's latest age: solid = Long Distance, dashed = Short Distance." : "";
   document.getElementById("phDate").textContent = `Generated ${new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"})}`;
 }
 
@@ -372,7 +390,7 @@ function renderAppendix(people, events){
     let part = "";
     for (const [, e] of events) {
       const list = e.by.get(p.key);
-      if (list) part += `<h3>${esc(eventTitle(e))}</h3>${historyTable(list)}`;
+      if (list) part += `<h3>${esc(eventTitle(e))}</h3>${historyTable(list, p)}`;
     }
     if (part) h += `<h2>${esc(p.first)} ${esc(p.last)}</h2>${part}`;
   }
@@ -463,6 +481,7 @@ document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => b.close
 document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
 $("wrap").addEventListener("click", e => { const b = e.target.closest("button[data-ev]"); if (b) openDetail(b.dataset.ev, b.dataset.p); });
 document.querySelectorAll("#viewbar [data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
+$("efslChk").onchange = e => setEfsl(e.target.checked);
 $("appendixChk").onchange = e => document.body.classList.toggle("with-appendix", e.target.checked);
 
 const drop = $("drop");

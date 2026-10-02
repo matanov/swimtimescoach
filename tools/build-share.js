@@ -28,7 +28,7 @@ const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "src", "share-template.js");
 const APP = path.join(ROOT, "swimtimescoach.html");
 const DEMO = path.join(ROOT, "demo.html");
-const SCRIPTS = ["vendor/jszip.min.js", "src/cl2.js", "src/session.js", "src/app.js"];
+const SCRIPTS = ["vendor/jszip.min.js", "src/cl2.js", "src/session.js", "src/standards-efsl.js", "src/app.js"];
 const read = p => fs.readFileSync(path.join(ROOT, p), "utf8");
 
 function replaceOnce(html, from, to){

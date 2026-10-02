@@ -192,6 +192,24 @@ function courseBests(list){
   return out;
 }
 
+/* ------------------------------------------------------------------ qualifying standards
+   standards: championship qualifying times, shaped like standards/efsl-2025-2028.json.
+   Returns the id of the championship whose standard the swim meets at the given
+   age and sex, or null. The caller passes the swimmer's latest age: a swim that met
+   the 11-year-old standard doesn't count once the swimmer is 12, unless it also
+   meets the 12 standard. Equal to the standard counts. Only SCM and LCM. */
+function qualifyingChamp(standards, s, age, sex){
+  if (!standards || s.time.cs == null || age == null || (s.course !== "SCM" && s.course !== "LCM")) return null;
+  const g = standards.ageGroups.find(g => (g.minAge == null || age >= g.minAge) && age <= g.maxAge);
+  if (!g) return null;
+  const ev = `${s.dist} ${STROKES[s.stroke]}`;
+  for (const c of standards.championships) {
+    const t = c.standards[s.course]?.[ev]?.[g.id]?.[sex];
+    if (t && s.time.cs <= parseTime(t, "").cs) return c.id;
+  }
+  return null;
+}
+
 /* ------------------------------------------------------------------ sharing
    A shared file carries only the chosen swimmers: their D0/D3 records, plus
    the meet (B1) record and the team (C1) records of teams they swim for.
@@ -221,7 +239,7 @@ function trimToSwimmers(text, keys, team = null){
 
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers,
+              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

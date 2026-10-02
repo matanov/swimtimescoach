@@ -1,6 +1,6 @@
 /*
  * Saved sessions: one .zip holding every loaded .cl2/.sd3 text plus
- * session.json (selected swimmers, print option, table view, your team). Opening it re-parses the
+ * session.json (selected swimmers, print option, table view, your team, EFSL quals on/off). Opening it re-parses the
  * files, so a session always reflects the current parser. Nothing is stored
  * anywhere but the file the user downloads.
  *
@@ -14,7 +14,7 @@ const APP = "cl2-best-times";
 const VERSION = 1;
 
 // sources: [{name, text}], selected: iterable of person keys
-async function saveSession(JSZip, {sources, selected, appendix, view, team}){
+async function saveSession(JSZip, {sources, selected, appendix, view, team, efsl}){
   const zip = new JSZip();
   const files = sources.map((s, i) => {
     // index prefix keeps same-named files (e.g. two "results.cl2") apart
@@ -24,12 +24,12 @@ async function saveSession(JSZip, {sources, selected, appendix, view, team}){
   });
   zip.file(MANIFEST, JSON.stringify({
     app: APP, version: VERSION, saved: new Date().toISOString(),
-    files, selected: [...selected], appendix: !!appendix, view: view || "course", team: team || null,
+    files, selected: [...selected], appendix: !!appendix, view: view || "course", team: team || null, efsl: !!efsl,
   }, null, 2));
   return zip.generateAsync({type: "uint8array", compression: "DEFLATE"});
 }
 
-// Returns {sources, selected, appendix, view, team}, or null if the zip isn't a saved session.
+// Returns {sources, selected, appendix, view, team, efsl}, or null if the zip isn't a saved session.
 // view and team are null for sessions saved before they existed (team is also null for one-team data).
 async function readSession(zip){
   const mf = zip.file(MANIFEST);
@@ -46,7 +46,7 @@ async function readSession(zip){
   }
   const view = ["course", "event"].includes(m.view) ? m.view : null;
   const team = typeof m.team === "string" ? m.team : null;
-  return {sources, selected: Array.isArray(m.selected) ? m.selected : [], appendix: !!m.appendix, view, team};
+  return {sources, selected: Array.isArray(m.selected) ? m.selected : [], appendix: !!m.appendix, view, team, efsl: !!m.efsl};
 }
 
 const api = { saveSession, readSession, MANIFEST };

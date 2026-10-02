@@ -49,3 +49,30 @@ test("spot checks against the printed tables, including cells next to blank colu
   assert.equal(sd.LCM["100 IM"], undefined);
   assert.equal(sd.LCM["200 IM"]["10"], undefined);
 });
+
+const EFSL = require("../src/standards-efsl.js");
+const swim = (dist, stroke, course, time) => ({ dist, stroke, course, time: CL2.parseTime(time, "") });
+
+test("the app's standards script is the same data as the JSON", () => {
+  assert.deepEqual(EFSL, efsl);
+});
+
+test("a swim qualifies for the championship whose standard it meets", () => {
+  const q = CL2.qualifyingChamp;
+  assert.equal(q(EFSL, swim(800, "1", "SCM", "13:09.89"), 12, "F"), "long-distance");   // equal to the standard counts
+  assert.equal(q(EFSL, swim(800, "1", "SCM", "13:09.90"), 12, "F"), null);              // a hundredth slower doesn't
+  assert.equal(q(EFSL, swim(50, "1", "LCM", "0:30.99"), 15, "M"), "short-distance");    // 15 is in 15-16
+  assert.equal(q(EFSL, swim(100, "2", "SCM", "1:10.00"), 13, "M"), "short-distance");   // 100 Back: Short Distance from 13
+  assert.equal(q(EFSL, swim(100, "2", "SCM", "1:10.00"), 12, "M"), "long-distance");    // ...Long Distance up to 12
+  assert.equal(q(EFSL, swim(50, "1", "SCY", "20.00"), 12, "M"), null);                  // no yards standards
+  assert.equal(q(EFSL, swim(50, "1", "SCM", "20.00"), 20, "M"), null);                  // no group for 20
+  assert.equal(q(EFSL, swim(50, "1", "SCM", "20.00"), null, "M"), null);
+  assert.equal(q(EFSL, { ...swim(50, "1", "SCM", "20.00"), time: CL2.parseTime("DQ", "X") }, 12, "M"), null);
+});
+
+test("swims are judged at the swimmer's latest age", () => {
+  // met the 11-year-old 400 Free standard (6:37.29) but is now 12 (6:22.69)
+  const s = swim(400, "1", "SCM", "6:30.00");
+  assert.equal(CL2.qualifyingChamp(EFSL, s, 11, "F"), "long-distance");
+  assert.equal(CL2.qualifyingChamp(EFSL, s, 12, "F"), null);
+});
