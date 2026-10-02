@@ -35,7 +35,8 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - Never pick a "best" across courses: yards and meters times aren't comparable. The event view (`courseBests`) keeps one best per course.
 - Meets are never merged by name; `labelMeets` gives same-name meets distinct labels. Show `meet.label` (or `datedLabel` next to a date), not `meet.name`.
 - Saved sessions store the raw file texts, not parsed data, and are re-parsed on open. Bump `VERSION` in `src/session.js` only if `session.json` changes incompatibly.
-- Cross-file logic (`assignPeople`, `bestOf`, `labelMeets`) lives in `src/cl2.js` so it is testable in Node; `src/app.js` is DOM only.
+- The app is for one team. With several teams loaded, `state.team` (a team code) filters everything through `teamSwims()`/`teamMeets()` in app.js; never iterate `state.swims` directly for display. Other teams' swims stay loaded (so the team can be switched) but are never shown, shared or exported. Only swims done for the chosen team count, even for a swimmer who moved clubs.
+- Cross-file logic (`assignPeople`, `bestOf`, `labelMeets`, `listTeams`) lives in `src/cl2.js` so it is testable in Node; `src/app.js` is DOM only.
 
 ## Share as file
 - `tools/build-share.js` inlines index.html, styles, fonts and scripts into one template; it fails loudly if the index.html snippets it replaces change. App scripts must not contain `<!--` (breaks inline script parsing); `</script` is escaped automatically.

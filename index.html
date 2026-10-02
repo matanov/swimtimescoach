@@ -80,6 +80,7 @@
       <ol>
         <li>Get the meet results as <b>.cl2</b> files (Hy-Tek's results export, usually from the meet host or results site). <b>.sd3</b> files and <b>.zip</b> results archives work too.</li>
         <li>Click <b>Add files</b> or drop them on the page. Add more meets at any time; a file you've already added is skipped.</li>
+        <li>If the files have results from several teams, pick yours. Only your team's swimmers and swims are shown; to switch, open the meet line above the table and tap <b>Change team</b>.</li>
         <li>Pick swimmers with <b>Choose swimmers</b>. Search by name or filter by team.</li>
       </ol>
     </section>
@@ -114,6 +115,17 @@
         <li>The downloaded copy doesn't update itself. Download it again now and then to get new features.</li>
       </ul>
     </section>
+  </div>
+</dialog>
+
+<dialog id="teamPick" aria-labelledby="teamTitle">
+  <div class="dhead">
+    <div><h2 id="teamTitle">Which team is yours?</h2><p id="teamCount"></p></div>
+  </div>
+  <div class="pk-list" id="teamList"></div>
+  <div class="pk-foot">
+    <span></span>
+    <button class="btn primary" id="teamOk">Show my team</button>
   </div>
 </dialog>
 

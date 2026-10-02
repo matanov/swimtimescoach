@@ -16,18 +16,27 @@ if (isDownloadedApp) {
 // CSS only, see staticGrid) until scripts run; then the full app takes over.
 document.documentElement.classList.remove("nojs");
 document.getElementById("sdetails")?.remove();
-const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets,
+const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, listTeams,
         pairedDist, columnLabel, courseBests, trimToSwimmers, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
 // sources: the loaded file texts, kept so a session can be saved and reopened
 // view: "course" = a column per event per course; "event" = one column per event, SC and LC times stacked
-const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map(), view: "course" };
+// team: the app is for one team. When the files hold several, the user picks theirs (a team
+// code) and everything shows only that team's swims; null when there's one team, or no pick.
+const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map(), view: "course", team: null };
 const seenText = new Set();
 
+const teamSwims = () => state.team ? state.swims.filter(s => s.team === state.team) : state.swims;
+function teamMeets(){
+  const used = new Set(teamSwims().map(s => s.meet));
+  return state.files.filter(m => used.has(m));
+}
+const teamName = code => { const t = listTeams(state.swims).find(t => t.code === code); return t ? t.name || "No team listed" : code; };
+
 function rebuildPeople(){
-  state.people = assignPeople(state.swims);
+  state.people = assignPeople(teamSwims());
   for (const k of [...state.selected]) if (!state.people.has(k)) state.selected.delete(k);
 }
 
@@ -85,6 +94,7 @@ async function addFiles(fileList){
         if (seenText.has(text)) { if (!session) problems.push(`${name}: already loaded`); continue; }
         const parsed = parseCL2(text, name);
         if (!parsed.swims.length) { problems.push(`${name}: no individual results found`); continue; }
+        if (state.team && !session && !parsed.swims.some(s => s.team === state.team)) problems.push(`${name}: no ${teamName(state.team)} swimmers in it`);
         seenText.add(text);
         state.sources.push({name, text});
         state.files.push(parsed.meet);
@@ -95,7 +105,17 @@ async function addFiles(fileList){
   }
   if (problems.length) msg.textContent = problems.join(" · ");
   if (!added && !restored.length) return;
-  if (added) { labelMeets(state.files); rebuildPeople(); }
+  if (added) labelMeets(state.files);
+  const teams = listTeams(state.swims);
+  for (const r of restored) if (r.team && teams.some(t => t.code === r.team)) state.team = r.team;
+  if (teams.length < 2) state.team = null;
+  else if (!teams.some(t => t.code === state.team)) return openTeamPicker(restored);
+  finishLoad(restored);
+}
+
+// After loading (and picking a team, if needed): who's selected, which view, then draw.
+function finishLoad(restored = []){
+  rebuildPeople();
   for (const r of restored) {
     r.selected.forEach(k => { if (state.people.has(k)) state.selected.add(k); });
     if (r.appendix) $("appendixChk").checked = true;
@@ -109,9 +129,30 @@ async function addFiles(fileList){
   if (!state.selected.size) openPicker();
 }
 
+/* ------------------------------------------------------------------ your team */
+// Shown when the loaded files hold more than one team. Picking finishes the load;
+// closing without picking (Esc) shows every team, with a link to pick later.
+let awaitingTeam = null;   // restored sessions to apply once the dialog closes
+function openTeamPicker(restored = []){
+  const teams = listTeams(state.swims);
+  $("teamCount").textContent = `These files have results from ${teams.length} teams. The table will show only your team's swimmers.`;
+  $("teamList").innerHTML = teams.map((t, i) =>
+    `<label><input type="radio" name="team" value="${esc(t.code)}" ${(state.team ? t.code === state.team : i === 0) ? "checked" : ""}> ${esc(t.name || "No team listed")} ` +
+    `<small>${t.swimmers} swimmer${t.swimmers > 1 ? "s" : ""} · ${t.meets} meet${t.meets > 1 ? "s" : ""}</small></label>`).join("");
+  awaitingTeam = restored;
+  $("teamPick").showModal();
+}
+// Finishes directly rather than waiting for the dialog's close event, which can arrive late.
+function closeTeamPicker(code){
+  if (code && code !== state.team) { state.team = code; state.selected.clear(); }   // the other team's swimmers no longer apply
+  const r = awaitingTeam; awaitingTeam = null;
+  if ($("teamPick").open) $("teamPick").close();
+  if (r) finishLoad(r);
+}
+
 async function saveSessionFile(){
   try {
-    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view});
+    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team});
     download(new Blob([bytes], {type:"application/zip"}), `best-times-session-${new Date().toISOString().slice(0,10)}.zip`);
   } catch (e) { $("msg").textContent = `Couldn't save the session: ${e.message}`; }
 }
@@ -153,8 +194,8 @@ async function shareFile(){
     if (!state.selected.size) throw new Error("choose at least one swimmer first");
     const template = await loadShareTemplate();
     render();   // the static table and swim list below must match the current selection
-    const sources = state.sources.map(s => ({name: s.name, text: trimToSwimmers(s.text, state.selected)})).filter(s => s.text);
-    const bytes = await saveSession(JSZip, {sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view});
+    const sources = state.sources.map(s => ({name: s.name, text: trimToSwimmers(s.text, state.selected, state.team)})).filter(s => s.text);
+    const bytes = await saveSession(JSZip, {sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team});
     const today = new Date().toISOString().slice(0, 10);
     const parts = {
       date: esc(fmtDate(today)), data: toBase64(bytes),
@@ -177,19 +218,23 @@ const noTime = list => list[0].time.dq ? "DQ" : (list[0].time.code || "—");
 const fmtDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"}) : "";
 
 // Collapsed to one line ("18 meets · Sep 6, 2025 – Feb 28, 2026") to save room on phones.
-// <details> opens without scripts, so this works in shared-file previews too.
-function meetList(meets, open = false){
+// <details> opens without scripts, so this works in shared-file previews too. When the
+// files hold several teams, the line starts with yours and "Change team" sits inside.
+function meetList(meets, open = false, team = ""){
   if (!meets.length) return "";
   const sorted = meets.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
   const dates = sorted.map(m => m.start).filter(Boolean);
   const span = !dates.length ? "" : " · " + fmtDate(dates[0]) + (dates.length > 1 && dates.at(-1) !== dates[0] ? " – " + fmtDate(dates.at(-1)) : "");
-  return `<details class="meets"${open ? " open" : ""}><summary>${sorted.length} meet${sorted.length > 1 ? "s" : ""}${esc(span)}</summary><div>` +
-    sorted.map(m => `<span>${esc(m.datedLabel)}${m.start ? " (" + esc(fmtDate(m.start)) + ")" : ""}</span>`).join("") + `</div></details>`;
+  return `<details class="meets"${open ? " open" : ""}><summary>${team ? `<b>${esc(team)}</b> · ` : ""}${sorted.length} meet${sorted.length > 1 ? "s" : ""}${esc(span)}</summary><div>` +
+    sorted.map(m => `<span>${esc(m.datedLabel)}${m.start ? " (" + esc(fmtDate(m.start)) + ")" : ""}</span>`).join("") +
+    (team ? `<button type="button" class="linkbtn teamchange" data-team-change>Change team</button>` : "") + `</div></details>`;
 }
 
 function renderFiles(){
   const el = document.getElementById("files");
-  el.innerHTML = meetList(state.files, el.querySelector("details")?.open);   // keep it open if the user opened it
+  const teams = listTeams(state.swims);
+  const team = teams.length < 2 ? "" : state.team ? teamName(state.team) : `All ${teams.length} teams`;
+  el.innerHTML = meetList(teamMeets(), el.querySelector("details")?.open, team);   // keep it open if the user opened it
   const has = state.swims.length > 0;
   for (const id of ["pickBtn","printBtn","csvBtn","saveBtn","shareBtn","clearBtn"]) document.getElementById(id).disabled = !has;
   document.getElementById("drop").style.display = has ? "none" : "";
@@ -207,7 +252,7 @@ function buildGrid(){
   const byEvent = state.view === "event";
   // events -> person -> swims; in event view course is null and all courses share a column
   const events = new Map();
-  for (const s of state.swims) {
+  for (const s of teamSwims()) {
     if (!keys.has(s.pkey)) continue;
     const course = byEvent ? null : s.course, dist = byEvent ? pairedDist(s) : s.dist;
     const ek = `${course || "all"}|${s.stroke}|${String(dist).padStart(4,"0")}`;
@@ -314,8 +359,9 @@ function openDetail(ek, pk){
 
 function renderPrintHead(){
   const people = selectedPeople();
-  document.getElementById("phTitle").textContent = people.length === 1 ? `Best times: ${people[0].first} ${people[0].last}` : "Best times";
-  const meets = state.files.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+  document.getElementById("phTitle").textContent = people.length === 1 ? `Best times: ${people[0].first} ${people[0].last}`
+    : state.team ? `Best times: ${teamName(state.team)}` : "Best times";
+  const meets = teamMeets().slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
   document.getElementById("phMeets").textContent = `From ${meets.length} meet${meets.length>1?"s":""}: ` + meets.map(m => `${m.datedLabel}${m.start ? " (" + fmtDate(m.start) + ")" : ""}`).join("; ");
   document.getElementById("phDate").textContent = `Generated ${new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"})}`;
 }
@@ -403,7 +449,10 @@ $("helpBtn").onclick = openHelp;
 document.querySelectorAll("[data-help]").forEach(b => b.onclick = openHelp);
 $("printBtn").onclick = () => { document.body.classList.toggle("with-appendix", $("appendixChk").checked); window.print(); };
 $("csvBtn").onclick = downloadCSV;
-$("clearBtn").onclick = () => { state.files = []; state.swims = []; state.sources = []; state.selected.clear(); state.people.clear(); seenText.clear(); $("msg").textContent = ""; renderFiles(); render(); };
+$("clearBtn").onclick = () => { state.files = []; state.swims = []; state.sources = []; state.team = null; state.selected.clear(); state.people.clear(); seenText.clear(); $("msg").textContent = ""; renderFiles(); render(); };
+$("teamOk").onclick = () => closeTeamPicker(document.querySelector("#teamList input:checked")?.value);
+$("teamPick").addEventListener("close", () => closeTeamPicker());   // Esc: show every team
+$("files").addEventListener("click", e => { if (e.target.closest("[data-team-change]")) openTeamPicker(); });
 $("pkSearch").oninput = renderPicker;
 $("pkTeam").onchange = renderPicker;
 $("pkList").onchange = e => { if (e.target.type === "checkbox") { e.target.checked ? state.selected.add(e.target.value) : state.selected.delete(e.target.value); $("pkCount").textContent = `${state.selected.size} selected of ${state.people.size}`; } };

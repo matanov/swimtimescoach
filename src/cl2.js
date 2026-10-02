@@ -154,6 +154,20 @@ function labelMeets(meets){
   return meets;
 }
 
+// Teams in the loaded swims, most swimmers first: [{code, name, swimmers, meets}].
+// The app is for one team; when files hold several, the user picks theirs from this.
+function listTeams(swims){
+  const teams = new Map();
+  for (const s of swims) {
+    let t = teams.get(s.team);
+    if (!t) teams.set(s.team, t = {code: s.team, name: s.teamName || s.team, names: new Set(), meets: new Set()});
+    t.names.add(norm(s.swimmer.last) + "|" + norm(s.swimmer.first));
+    t.meets.add(s.meet);
+  }
+  return [...teams.values()].map(t => ({code: t.code, name: t.name, swimmers: t.names.size, meets: t.meets.size}))
+    .sort((a, b) => b.swimmers - a.swimmers || a.name.localeCompare(b.name));
+}
+
 /* ------------------------------------------------------------------ event view
    One column per event across all courses. Free distances that differ
    between yards and meters share a column (500Y with 400M, ...). */
@@ -183,20 +197,21 @@ function courseBests(list){
    the meet (B1) record and the team (C1) records of teams they swim for.
    Relays, splits, contacts and every other swimmer are left out. keys are
    person keys from assignPeople; a same-name swimmer split by USS ID is kept
-   with its namesake. Returns "" when none of them swam an individual event. */
-function trimToSwimmers(text, keys){
+   with its namesake. With team (a team code), only swims for that team are kept.
+   Returns "" when none of them swam an individual event. */
+function trimToSwimmers(text, keys, team = null){
   const names = new Set([...keys].map(k => k.split("|").slice(0, 2).join("|")));
   const out = [];
-  let team = null, keepD3 = false, swims = 0;
+  let c1 = null, code = "", keepD3 = false, swims = 0;
   for (const raw of text.split(/\r?\n/)) {
     const rec = raw.slice(0, 2), line = raw.padEnd(160);
     if (rec === "B1") out.push(raw);
-    else if (rec === "C1") team = raw;
+    else if (rec === "C1") { c1 = raw; code = f(line, 12, 6) + f(line, 150, 1); }
     else if (rec === "D0") {
       const n = splitName(f(line, 12, 28));
-      keepD3 = names.has(norm(n.last) + "|" + norm(n.first));
+      keepD3 = names.has(norm(n.last) + "|" + norm(n.first)) && (!team || code === team);
       if (!keepD3) continue;
-      if (team) { out.push(team); team = null; }
+      if (c1) { out.push(c1); c1 = null; }
       out.push(raw);
       if (int(f(line, 68, 4))) swims++;
     } else if (rec === "D3" && keepD3) out.push(raw);
@@ -206,7 +221,7 @@ function trimToSwimmers(text, keys){
 
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              pairedDist, columnLabel, courseBests, trimToSwimmers,
+              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

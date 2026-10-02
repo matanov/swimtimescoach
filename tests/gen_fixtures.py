@@ -47,3 +47,17 @@ d=meet('Summer LC','07152025','ITTEST',[
 ],course='L')
 for fn,txt in [('fall-invite.cl2',a),('winter-champs.cl2',b),('fall-invite-2024.cl2',c),('summer-lc.cl2',d)]:
     open(OUT/fn,'w',newline='').write(txt)
+# two clubs at one meet, each with a different girl called Emma Smith (no USS IDs);
+# kept out of fixtures/ so single-team tests and the anonymizer test don't see it
+e='\r\n'.join([rec('A0',[(12,2,'02')]),
+ rec('B1',[(12,30,'Autumn Open'),(86,20,'Vicenza'),(122,8,'10042025'),(130,8,'10042025'),(150,1,'S')]),
+ rec('C1',[(12,6,'ZZSHRK'),(18,30,'Sharks')]),
+ d0('Smith, Emma','','12','F','50','1','1','10042025','','', '31.20','S','','3'),
+ d0('Neri, Paolo','','13','M','100','1','2','10042025','','', '1:05.10','S','','2'),
+ rec('C1',[(12,6,'ZZDOLP'),(18,30,'Dolphins')]),
+ d0('Smith, Emma','','14','F','50','1','1','10042025','','', '29.05','S','','1'),
+ d0('Lee, Ana','','11','F','50','1','1','10042025','','', '34.00','S','','5'),
+ d0('Park, Jin','','12','M','50','1','3','10042025','','', '30.40','S','','4'),
+ rec('Z0',[])])+'\r\n'
+(OUT.parent/'fixtures-multi').mkdir(exist_ok=True)
+open(OUT.parent/'fixtures-multi'/'two-teams.cl2','w',newline='').write(e)

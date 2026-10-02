@@ -64,6 +64,12 @@ The same guide is in the app under **Help & privacy**.
 - Click **Add files** or drop them on the page. Add more meets at any time; a
   file that's already loaded is skipped.
 
+If the files hold results from more than one team (a whole meet's results, say),
+the app asks **Which team is yours?** and from then on shows only your team's
+swimmers and the swims they did for your team. To switch, open the meet line
+above the table ("**Sharks** · 5 meets · …") and tap **Change team**. Saved
+sessions remember the choice; shared files only ever contain your team.
+
 ### 2. Choose swimmers
 **Choose swimmers** lists everyone in the loaded meets. Search by name or
 filter by team, then **Show table**. With 15 swimmers or fewer, everyone is
