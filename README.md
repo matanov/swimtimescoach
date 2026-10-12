@@ -163,6 +163,14 @@ long course meet. Like the app, it runs entirely in your browser.
 4. Review the before-and-after list and **Save converted file**. Your original
    file isn't changed. Only the time fields and their course codes are
    rewritten; every other character and line ending stays the same.
+5. **Coach review:** a report of every entry in the chosen time fields,
+   grouped by swimmer, showing the original time, the same time relabeled to
+   the target course, and the converted time (the custom factor if chosen,
+   otherwise the standard conversion), with the change in seconds and notes
+   (already in the target course, no time, no standard conversion, unusual
+   time). **Print / Save PDF** prints only the report, with a box to tick for
+   each entry and lines for the reviewer's name, date and signature.
+   **Download CSV** saves the same rows for a spreadsheet.
 
 ## For developers
 
@@ -199,7 +207,7 @@ other sites, and don't store result data in the browser.
 | `src/session.js` | Save/open a session `.zip` (meet files + `session.json`) |
 | `src/styles.css` | Styles, including light/dark theme and print layout |
 | `converter.html`, `src/converter.js`, `src/converter.css` | SD3 course converter page (DOM and styles) |
-| `src/sd3convert.js` | SD3 course converter logic: parsing time fields, standard and custom conversion, rebuilding the file byte for byte (browser global `SD3Convert`, or `require` in Node) |
+| `src/sd3convert.js` | SD3 course converter logic: parsing time fields, standard and custom conversion, the coach review report and its CSV, rebuilding the file byte for byte (browser global `SD3Convert`, or `require` in Node) |
 | `vendor/jszip.min.js` | JSZip 3.10.1, for reading `.zip` files |
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
 | `tests/` | Node tests and synthetic fixtures |

@@ -138,6 +138,63 @@ function renderPreview(){
   state.outName = `${base}_${o.tgt}_${{relabel:"relabel", standard:"std", custom:"custom"}[o.method]}${ext}`;
   $("dlName").innerHTML = `<span class="mono">${esc(state.outName)}</span>`;
   $("dl").disabled = !(p.changes.length || p.meetChange);
+  renderReport(o);
+}
+
+/* ---------- step 5: coach review report ---------- */
+let lastReview = null;
+const nowStamp = () => new Date().toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
+function methodText(rv){
+  if (rv.method === "custom")
+    return "Custom: " + Object.entries(rv.fac).filter(([, f]) => f > 0).map(([c, f]) => `${c} × ${f}`).join(", ") +
+      (rv.off ? `, ${rv.off > 0 ? "+" : ""}${rv.off} s per 100` : "");
+  return "Standard: Swim England equivalent-time formula";
+}
+const tcell = (t, strong) => t ? `<span class="${strong ? "rt strong" : "rt"}">${esc(t.time)}</span> <span class="rc">${esc(t.course)}</span>` : `<span class="rt muted">–</span>`;
+function renderReport(o){
+  const rv = X.review(state.parsed, o); lastReview = rv;
+  const m = state.parsed.meet, k = rv.counts;
+  const dates = [fmtDate(m.start), fmtDate(m.end)].filter(Boolean);
+  const meta = [
+    ["Team", esc(m.team || "–")],
+    ["Meet dates", esc(dates.length === 2 && dates[0] !== dates[1] ? dates.join(" – ") : (dates[0] || "–"))],
+    ["Meet course", m.course ? esc(m.course) + (rv.meetChange && o.meet ? ` → ${rv.tgt}` : "") : "–"],
+    ["File", `<span class="mono">${esc(state.sample ? "built-in sample" : state.name)}</span>`],
+    ["Proposed course", esc(rv.tgt)],
+    ["Converted column", esc(methodText(rv))],
+    ["Prepared", esc(nowStamp())]
+  ].map(([a, b]) => `<div><span class="k">${a}</span> ${b}</div>`).join("");
+  const summary = [[k.total, "entries"], [k.change, `to change to ${rv.tgt}`], [k.same, `already ${rv.tgt}`], [k.nt, "no time"],
+    [k.skipped, "no standard conversion"], [k.excluded, "not selected"], [k.unusual, "to check"]]
+    .filter(([n], i) => i < 2 || n).map(([n, t]) => `<b>${n}</b> ${t}`).join(" · ");
+  let body = "", group = null;
+  for (const r of rv.rows) {
+    const g = r.relay ? "Relays" : r.who;
+    if (g !== group) {
+      group = g;
+      const sub = r.relay ? "" : [r.age && `age ${r.age}`, {F:"female", M:"male"}[r.sex]].filter(Boolean).join(", ");
+      body += `<tr class="grp"><th colspan="8">${esc(g)}${sub ? ` <span class="muted">· ${esc(sub)}</span>` : ""}</th></tr>`;
+    }
+    const d = r.delta;
+    body += `<tr class="st-${r.status}${r.unusual ? " odd" : ""}"><td class="tick"><span class="box"></span></td>` +
+      `<td>${esc(r.relay ? `${r.event} (${r.who})` : r.event)}</td><td>${esc(r.field)}</td>` +
+      `<td class="n">${tcell(r.orig)}</td><td class="n">${tcell(r.relabeled)}</td><td class="n">${tcell(r.converted, r.status === "change")}</td>` +
+      `<td class="n mono ${d > 0 ? "delta-up" : d < 0 ? "delta-down" : ""}">${d == null ? "" : (d > 0 ? "+" : "") + d.toFixed(2)}</td>` +
+      `<td class="note-c">${esc(r.note)}</td></tr>`;
+  }
+  $("report").innerHTML =
+    `<div class="rep-head"><div class="rep-kicker">Entry review before submission</div><h3 class="rep-title">${esc(m.name || "Meet")}</h3>` +
+    `<div class="rep-meta">${meta}</div><p class="rep-sum">${summary}</p></div>` +
+    (rv.rows.length ? `<div class="rep-tbl"><table class="rep"><thead><tr><th class="tick">OK</th><th>Event</th><th>Field</th>` +
+      `<th class="n">Original</th><th class="n">Relabeled</th><th class="n">Converted</th><th class="n">Change s</th><th>Note</th></tr></thead><tbody>${body}</tbody></table></div>`
+      : `<p class="muted">No entries in the selected time fields.</p>`) +
+    `<p class="rep-legend small muted">Original: as exported. Relabeled: same time, course code changed to ${esc(rv.tgt)}. ` +
+    `Converted: ${esc(methodText(rv))}, rounded to the hundredth. Tick OK for each entry you approve.</p>` +
+    `<div class="rep-sign"><span>Reviewed by</span><span>Date</span><span>Signature</span></div>`;
+  const base = state.name.replace(/\.[^.]+$/, "") || "entries";
+  state.repBase = `${base}_review_${rv.tgt}`;
+  $("repName").innerHTML = `<span class="mono">${esc(state.repBase)}.csv</span>`;
+  $("repPrint").disabled = $("repCsv").disabled = !rv.rows.length;
 }
 
 function refresh(){ renderSrc(); renderCustom(); renderPreview(); }
@@ -178,6 +235,25 @@ document.addEventListener("drop", e => {
 document.querySelectorAll("input[name=tgt],input[name=method]").forEach(x => x.addEventListener("change", refresh));
 $("s3").addEventListener("input", renderPreview);
 $("s3").addEventListener("change", e => { if (!e.target.matches("input[name=tgt],input[name=method]")) renderPreview(); });
+function saveFile(text, name, type){
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+$("repCsv").addEventListener("click", () => {
+  if (!lastReview) return;
+  saveFile("\uFEFF" + X.reviewCSV(lastReview), `${state.repBase}.csv`, "text/csv;charset=utf-8");   // BOM so Excel reads accents
+  $("repName").innerHTML = `Saved <span class="mono">${esc(state.repBase)}.csv</span>`;
+});
+$("repPrint").addEventListener("click", () => {
+  const title = document.title;
+  document.title = state.repBase;                    // default PDF file name
+  document.body.classList.add("print-report");
+  window.print();
+  document.title = title;
+  document.body.classList.remove("print-report");
+});
 $("dl").addEventListener("click", () => {
   try {
     const out = X.build(state.parsed, lastPlan);

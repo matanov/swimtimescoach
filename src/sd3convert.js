@@ -71,7 +71,8 @@ function parse(text){
         const raw = sub(s, tc, 8), codeChar = sub(s, cc, 1), course = COURSE[codeChar];
         if (!course && !raw.trim()) return;
         items.push({li:i, rec, fi, tc, cc, raw, secs:parseTime(raw), course:course || "?", codeChar,
-          dist, stroke, who, relay:rec === "E0", event:`${dist} ${STROKE[stroke] || "?"}`});
+          dist, stroke, who, relay:rec === "E0", event:`${dist} ${STROKE[stroke] || "?"}`,
+          age: rec === "D0" ? sub(s, 64, 2).trim() : "", sex: rec === "D0" ? sub(s, 66, 1).trim() : sub(s, 21, 1).trim()});
       });
     }
   });
@@ -162,13 +163,70 @@ function build(parsed, p){
   return out;
 }
 
+/* Pace slower than 4:00 or faster than 0:40 per 100: usually a typo. */
+function isUnusual(it){
+  if (it.relay || it.secs == null || !it.dist) return false;
+  const pace = it.secs / (it.dist / 100);
+  return pace > 240 || pace < 40;
+}
+
+/* Coach review: every entry in the chosen fields, with its original time, the
+   same time relabeled to the target course, and the converted time. The
+   converted column uses the custom factors when that method is chosen,
+   otherwise the standard conversion. */
+function review(parsed, o){
+  const convMethod = o.method === "custom" ? "custom" : "standard";
+  const rel = plan(parsed, {...o, method:"relabel"}), conv = plan(parsed, {...o, method:convMethod});
+  const relMap = new Map(rel.changes.map(c => [c.it, c]));
+  const convMap = new Map(conv.changes.map(c => [c.it, c]));
+  const skipMap = new Map(conv.skipped.map(s => [s.it, s.why]));
+  const rows = parsed.items.filter(it => o.fields[it.fi] && (o.relays || !it.relay)).map(it => {
+    const r = relMap.get(it), c = convMap.get(it), skip = skipMap.get(it);
+    const orig = {time: it.raw.trim() || "NT", course: CODE[it.course] ? it.course : ""};
+    let status, relabeled, converted, delta = null;
+    if (it.secs == null) status = "nt";
+    else if (it.course === o.tgt) status = "same";
+    else if (!CODE[it.course] || !o.srcs[it.course] || (it.relay && !o.relays)) status = "excluded";
+    else if (skip) status = "skipped";
+    else status = "change";
+    relabeled = r ? {time: r.newRaw.trim() || "NT", course: o.tgt} : {...orig};
+    if (c) { converted = {time: c.newRaw.trim() || "NT", course: o.tgt}; if (it.secs != null) delta = Math.round((c.newSecs - it.secs) * 100) / 100; }
+    else if (skip) converted = null;
+    else converted = {...orig};
+    const notes = [];
+    if (status === "same") notes.push(`already ${o.tgt}`);
+    if (status === "nt") notes.push("no time");
+    if (status === "excluded") notes.push("not converted (course not selected)");
+    if (skip) notes.push(`no conversion: ${skip}`);
+    if (isUnusual(it)) notes.push("check time: unusual pace");
+    return {line: it.li + 1, who: it.who, age: it.age, sex: it.sex, relay: it.relay, event: it.event,
+            field: FIELDS[it.fi], orig, relabeled, converted, delta, status, unusual: isUnusual(it), note: notes.join("; ")};
+  });
+  const count = s => rows.filter(r => r.status === s).length;
+  return {rows, tgt: o.tgt, method: convMethod, fac: o.fac, off: o.off || 0, meetChange: !!rel.meetChange,
+          counts: {total: rows.length, change: count("change"), same: count("same"), nt: count("nt"),
+                   skipped: count("skipped"), excluded: count("excluded"), unusual: rows.filter(r => r.unusual).length}};
+}
+
+/* Review as CSV (UTF-8, comma separated, quoted where needed). */
+function reviewCSV(rv){
+  const q = v => { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const head = ["Line","Swimmer","Age","Sex","Event","Field","Original time","Original course",
+    "Relabeled time","Relabeled course","Converted time","Converted course","Change (s)","Status","Note"];
+  const out = [head.join(",")];
+  for (const r of rv.rows) out.push([r.line, r.who, r.age, r.sex, r.event, r.field, r.orig.time, r.orig.course,
+    r.relabeled.time, r.relabeled.course, r.converted ? r.converted.time : "", r.converted ? r.converted.course : "",
+    r.delta == null ? "" : r.delta.toFixed(2), r.status, r.note].map(q).join(","));
+  return out.join("\r\n") + "\r\n";
+}
+
 /* Built-in example file: a made-up team, safe to show. */
 function sampleText(){
   const L = f => { const a = Array(160).fill(" "); for (const [c, v] of f) for (let i = 0; i < v.length; i++) a[c - 1 + i] = v[i]; return a.join("").replace(/\s+$/, ""); };
   const t = s => s.padStart(8, " ");
-  const D = (name, dist, stroke, seed, c) => L([[1,"D01EF"],[12,name.padEnd(28)],[40,"000000SAMPLE"],[53,"ITA"],
-    [56,"01012012"],[64,"14"],[66,"F"],[67,"F"],[68,String(dist).padStart(4)],[72,stroke],[73,"  1 "],[77,"1314"],
-    [89,t(seed)],[97,seed.trim() ? c : " "]]);
+  const D = (name, dist, stroke, seed, c) => { const sx = /Marco|Luca/.test(name) ? "M" : "F"; return L([[1,"D01EF"],[12,name.padEnd(28)],[40,"000000SAMPLE"],[53,"ITA"],
+    [56,"01012012"],[64,"14"],[66,sx],[67,sx],[68,String(dist).padStart(4)],[72,stroke],[73,"  1 "],[77,"1314"],
+    [89,t(seed)],[97,seed.trim() ? c : " "]]); };
   return [
     L([[1,"A01V3"],[12,"01Meet Entries"],[44,"TeamUnify, LLC"],[64,"2.0"]]),
     L([[1,"B11"],[12,"Sample Autumn Long Course"],[86,"Vicenza"],[122,"1114202611152026"],[150,"L"]]),
@@ -191,7 +249,7 @@ function sampleText(){
   ].join("\r\n") + "\r\n";
 }
 
-const api = {parse, plan, build, standard, standardRelay, parseTime, fmtTime, sampleText,
+const api = {parse, plan, build, review, reviewCSV, isUnusual, standard, standardRelay, parseTime, fmtTime, sampleText,
              COURSE, CODE, STROKE, FIELDS, TF};
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.SD3Convert = api;

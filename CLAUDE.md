@@ -52,6 +52,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - `converter.html` is a separate page with the same CSP; logic in `src/sd3convert.js` (browser `window.SD3Convert` / Node `require`), DOM in `src/converter.js`, styles in `src/converter.css` on top of `src/styles.css`.
 - It rewrites only the 8-char time fields and their course codes (D0 cols 89–124, E0 cols 46–81, B1 col 150) and must keep every other byte, line length and line ending; `build` throws if a line length changes. Keep the file's code style (`1`/`S` digits vs letters).
 - Standard conversion = Swim England equivalent-time formula (turn factors `TF`, yards pool measures `PMY`). Events without a factor are skipped and listed, never guessed. Tests: `tests/sd3convert.test.js` (synthetic sample only).
+- Coach review (step 5): `review(parsed, opts)` returns one row per entry in the chosen fields with original, relabeled and converted times (converted = custom if chosen, else standard) and a status (`change`/`same`/`nt`/`skipped`/`excluded`); `reviewCSV` writes it. Printing the page prints only the report (`@media print` in converter.css).
 - It's not part of the one-file app; the footer link to it is `data-site-only`.
 
 ## Docs

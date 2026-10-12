@@ -101,3 +101,37 @@ test("LF-only files keep their line endings", () => {
   assert.ok(!out.includes("\r"));
   assert.equal(out.split("\n").length, lf.split("\n").length);
 });
+
+test("review lists every entry with original, relabeled and converted times", () => {
+  const rv = X.review(sample(), {...ALL, tgt:"LCM", method:"relabel", fields:[true,false,false,false]});
+  assert.equal(rv.method, "standard");                 // relabel → converted column uses the standard conversion
+  assert.equal(rv.rows.length, 14);
+  const r = rv.rows.find(r => r.who === "Conti, Sofia L" && r.event === "200 Breast");
+  assert.deepEqual([r.orig, r.relabeled, r.status], [{time:"2:51.18", course:"SCM"}, {time:"2:51.18", course:"LCM"}, "change"]);
+  assert.equal(r.converted.course, "LCM");
+  assert.ok(r.delta > 0 && r.converted.time !== "2:51.18");
+  const same = rv.rows.find(r => r.event === "100 Free" && r.who === "Rossi, Giulia A");
+  assert.deepEqual([same.status, same.converted.time, same.delta, same.note], ["same", "1:04.12", null, "already LCM"]);
+  const im = rv.rows.find(r => r.event === "100 IM");
+  assert.equal(im.status, "skipped"); assert.equal(im.converted, null); assert.match(im.note, /no standard factor/);
+  assert.equal(im.relabeled.course, "LCM");
+  const odd = rv.rows.find(r => r.who === "Moretti, Anna V");
+  assert.ok(odd.unusual); assert.match(odd.note, /check time/);
+  assert.deepEqual(rv.counts, {total:14, change:9, same:3, nt:0, skipped:2, excluded:0, unusual:1});
+});
+
+test("review uses custom factors when chosen and marks unselected courses", () => {
+  const rv = X.review(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{SCM:1.02, SCY:1.13}, srcs:{SCM:true, SCY:false}});
+  assert.equal(rv.method, "custom");
+  assert.equal(rv.rows.find(r => r.orig.time === "29.84").converted.time, "30.44");
+  const y = rv.rows.find(r => r.orig.course === "SCY");
+  assert.equal(y.status, "excluded"); assert.equal(y.converted.course, "SCY"); assert.equal(y.relabeled.course, "SCY");
+});
+
+test("review CSV has a header and one quoted row per entry", () => {
+  const csv = X.reviewCSV(X.review(sample(), {...ALL, tgt:"LCM", method:"standard"}));
+  const rows = csv.trim().split("\r\n");
+  assert.match(rows[0], /^Line,Swimmer,Age,Sex,Event,Field,Original time/);
+  assert.equal(rows.length, 15);
+  assert.ok(rows.some(r => r.startsWith('4,"Rossi, Giulia A",14,F,50 Free,Seed,29.84,SCM,29.84,LCM,')));
+});

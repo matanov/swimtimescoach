@@ -112,6 +112,17 @@
 </section>
 
 <section class="step" id="s5">
+  <div class="step-h"><span class="step-n">STEP 5</span><h2>Coach review</h2></div>
+  <p class="muted">Every entry with its original time, the same time relabeled, and the converted time, so the coach can check them before you submit. Print it, save it as PDF or download it as CSV.</p>
+  <div class="row noprint">
+    <button class="btn primary" id="repPrint">Print / Save PDF</button>
+    <button class="btn" id="repCsv">Download CSV</button>
+    <span class="small muted" id="repName"></span>
+  </div>
+  <div class="report" id="report"></div>
+</section>
+
+<section class="step noprint" id="s6">
   <details open>
     <summary>Instructions and method notes</summary>
     <div class="inner prose">
@@ -121,6 +132,7 @@
         <li>Check Step 2: how many times are SCM, SCY, LCM, and any unusual times to fix in TeamUnify first.</li>
         <li>Pick the target course, then the method. The preview updates as you change options.</li>
         <li>Review the changes and any skipped lines, then <b>Save converted file</b>.</li>
+        <li>For the coach, use <b>Coach review</b>: print it or save it as PDF, or download the CSV. It lists every entry with the original, relabeled and converted time and a box to tick.</li>
       </ol>
       <p><b>Relabel only</b> changes the course letter and nothing else. A short course time relabeled as long course is still a short course swim, usually faster than the swimmer would go in a 50 m pool. Use it only when the meet host accepts that, or when the course code itself was wrong.</p>
       <p><b>Standard conversion</b> uses the Swim England equivalent-time formula. It models the speed gained from each turn, with a separate turn factor for each stroke and distance, plus a yards-to-meters measure for SCY times. Results are rounded to the hundredth. Events without a published factor (25s, 100 IM) and yard seeds on 400/800 free are skipped and listed. Relays are converted leg by leg, assuming four equal splits.</p>
