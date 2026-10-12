@@ -15,6 +15,7 @@ const COURSE = {"1":"SCM","S":"SCM","s":"SCM","2":"SCY","Y":"SCY","y":"SCY","3":
 const CODE = {SCM:["1","S"], SCY:["2","Y"], LCM:["3","L"]};      // [digit style, letter style]
 const STROKE = {"1":"Free","2":"Back","3":"Breast","4":"Fly","5":"IM","6":"Free Relay","7":"Medley Relay"};
 const FIELDS = ["Seed","Prelim","Swim-off","Finals"];
+const STROKE_ORDER = {"Free":1,"Back":2,"Breast":3,"Fly":4,"IM":5,"Free Relay":6,"Medley Relay":7};
 // time field start column and its course column, per record type
 const LAYOUT = {
   D0:{t:[[89,97],[98,106],[107,115],[116,124]], dist:68, stroke:72},
@@ -202,6 +203,14 @@ function review(parsed, o){
     return {line: it.li + 1, who: it.who, age: it.age, sex: it.sex, relay: it.relay, event: it.event,
             field: FIELDS[it.fi], orig, relabeled, converted, delta, status, unusual: isUnusual(it), note: notes.join("; ")};
   });
+  // Swimmers A–Z by "Last, First"; each swimmer's events by stroke, distance, field; relays last.
+  const byName = (a, b) => a.localeCompare(b, undefined, {sensitivity:"base"});
+  const ev = r => { const [d, ...s] = r.event.split(" "); return [STROKE_ORDER[s.join(" ")] || 9, +d || 0]; };
+  rows.sort((a, b) => (a.relay - b.relay) ||
+    (a.relay ? 0 : byName(a.who, b.who)) ||
+    (ev(a)[0] - ev(b)[0]) || (ev(a)[1] - ev(b)[1]) ||
+    (a.relay ? byName(a.who, b.who) : 0) ||
+    (FIELDS.indexOf(a.field) - FIELDS.indexOf(b.field)) || (a.line - b.line));
   const count = s => rows.filter(r => r.status === s).length;
   return {rows, tgt: o.tgt, method: convMethod, fac: o.fac, off: o.off || 0, meetChange: !!rel.meetChange,
           counts: {total: rows.length, change: count("change"), same: count("same"), nt: count("nt"),

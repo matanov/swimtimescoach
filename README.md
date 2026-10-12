@@ -164,9 +164,10 @@ long course meet. Like the app, it runs entirely in your browser.
    file isn't changed. Only the time fields and their course codes are
    rewritten; every other character and line ending stays the same.
 5. **Coach review:** a report of every entry in the chosen time fields,
-   grouped by swimmer, showing the original time, the same time relabeled to
-   the target course, and the converted time (the custom factor if chosen,
-   otherwise the standard conversion), with the change in seconds and notes
+   swimmers A–Z (events by stroke and distance, relays last), showing the
+   original time, the same time relabeled to the target course, and the
+   converted time (the custom factor if chosen, otherwise the standard
+   conversion), with the change in seconds and notes
    (already in the target course, no time, no standard conversion, unusual
    time). **Print / Save PDF** prints only the report, with a box to tick for
    each entry and lines for the reviewer's name, date and signature.

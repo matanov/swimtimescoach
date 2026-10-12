@@ -135,3 +135,12 @@ test("review CSV has a header and one quoted row per entry", () => {
   assert.equal(rows.length, 15);
   assert.ok(rows.some(r => r.startsWith('4,"Rossi, Giulia A",14,F,50 Free,Seed,29.84,SCM,29.84,LCM,')));
 });
+
+test("review is sorted A–Z by swimmer, then stroke and distance, relays last", () => {
+  const rv = X.review(sample(), {...ALL, tgt:"LCM", method:"standard"});
+  const names = rv.rows.filter(r => !r.relay).map(r => r.who);
+  assert.deepEqual([...new Set(names)], ["Bianchi, Marco T", "Conti, Sofia L", "Greco, Luca P", "Moretti, Anna V", "Rossi, Giulia A"]);
+  assert.deepEqual(rv.rows.filter(r => r.who === "Rossi, Giulia A").map(r => r.event), ["50 Free", "100 Free", "200 IM"]);
+  assert.deepEqual(rv.rows.filter(r => r.who === "Conti, Sofia L").map(r => r.event), ["400 Free", "100 Breast", "200 Breast"]);
+  assert.deepEqual(rv.rows.slice(-2).map(r => r.event), ["200 Free Relay", "200 Medley Relay"]);
+});
