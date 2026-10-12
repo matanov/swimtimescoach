@@ -43,6 +43,11 @@ in your browser with everything built in: it works offline, needs no install,
 and keeps the same privacy protections. It doesn't update itself, so download
 it again now and then for new features.
 
+Getting entries ready for a meet? The **[SD3 course converter](https://swimtimescoach.com/converter.html)**
+fixes SCM/LCM seed courses in a TeamUnify `.sd3` file (see
+[below](#sd3-course-converter)). It's linked at the top of the app and in
+**Help & privacy**.
+
 Want to try it first? Download the five `.cl2` files in
 [`docs/sample-data/`](docs/sample-data) (a made-up team, safe to share) and
 add them to the app.
@@ -137,6 +142,44 @@ team, "400/500 Free" when both appear).
   labelled with the year, date, city or file name, whichever tells them apart.
 - Relays aren't shown yet; only individual swims.
 
+## SD3 course converter
+
+**[swimtimescoach.com/converter.html](https://swimtimescoach.com/converter.html)**
+fixes course codes in a TeamUnify `.sd3` entries file or a Hy-Tek `.cl2`
+results file, for example when SCM best times are submitted as seeds for a
+long course meet. Like the app, it runs entirely in your browser. Open it from
+the link at the top of the app, from **Help & privacy**, or from the footer.
+It's a page of the website only, not part of the downloadable one-file app.
+
+1. Open the `.sd3` or `.cl2` file (unzip TeamUnify's `.sd3_ext.zip` first).
+2. Check what's in it: meet, dates, meet course, how many seed, prelim,
+   swim-off and finals times are SCM, SCY or LCM, a breakdown by event, and
+   any unusual times (pace slower than 4:00 or faster than 0:40 per 100,
+   usually a typo).
+3. Choose the target course (LCM or SCM) and how to change the times:
+   - **Relabel only:** keep every time and change only the course code. A
+     short course time labelled LCM is still a short course swim, so use this
+     only when the meet host accepts it or the code itself was wrong.
+   - **Standard conversion:** the Swim England equivalent-time formula, with a
+     turn factor for each stroke and distance and a yards-to-metres measure
+     for SCY times. 100 IM, 25s and yard seeds on 400/800 free have no
+     standard conversion and are skipped and listed. Relays are converted leg
+     by leg, assuming four equal splits.
+   - **Custom factor:** your own multiplier for each source course, plus
+     optional seconds per 100.
+4. Review the before-and-after list and **Save converted file**. Your original
+   file isn't changed. Only the time fields and their course codes are
+   rewritten; every other character and line ending stays the same.
+5. **Coach review:** a report of every entry in the chosen time fields,
+   swimmers A–Z (events by stroke and distance, relays last), showing the
+   original time, the same time relabeled to the target course, and the
+   converted time (the custom factor if chosen, otherwise the standard
+   conversion), with the change in seconds and notes
+   (already in the target course, no time, no standard conversion, unusual
+   time). **Print / Save PDF** prints only the report, with a box to tick for
+   each entry and lines for the reviewer's name, date and signature.
+   **Download CSV** saves the same rows for a spreadsheet.
+
 ## For developers
 
 Plain HTML, CSS and JavaScript: no build step, no framework, no runtime
@@ -150,7 +193,7 @@ npm run build-share           # build src/share-template.js ("Share as file"), s
 ```
 
 Every push to `main` runs the tests and, if they pass, publishes `index.html`,
-`src/` and `vendor/` to GitHub Pages (`.github/workflows/pages.yml`), after
+`converter.html`, `src/` and `vendor/` to GitHub Pages (`.github/workflows/pages.yml`), after
 building the app as one self-contained page: `src/share-template.js` (that
 page as a string, for **Share as file**) and `swimtimescoach.html` (the same
 page with no data: the downloadable app, which copies its own page to share
@@ -171,6 +214,8 @@ other sites, and don't store result data in the browser.
 | `src/app.js` | UI: file loading, swimmer picker, grid, detail dialog, print, CSV, sessions |
 | `src/session.js` | Save/open a session `.zip` (meet files + `session.json`) |
 | `src/styles.css` | Styles, including light/dark theme and print layout |
+| `converter.html`, `src/converter.js`, `src/converter.css` | SD3 course converter page (DOM and styles) |
+| `src/sd3convert.js` | SD3 course converter logic: parsing time fields, standard and custom conversion, the coach review report and its CSV, rebuilding the file byte for byte (browser global `SD3Convert`, or `require` in Node) |
 | `vendor/jszip.min.js` | JSZip 3.10.1, for reading `.zip` files |
 | `vendor/fonts/` | Barlow and Barlow Condensed (latin, SIL OFL) |
 | `tests/` | Node tests and synthetic fixtures |

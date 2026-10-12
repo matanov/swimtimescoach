@@ -7,3 +7,10 @@ real-results/
 src/share-template.js
 swimtimescoach.html
 demo.html
+# TeamUnify / Hy-Tek exports dropped in the repo root: real swimmers' data, never commit
+*.sd3
+*.SD3
+*.sd3_ext.zip
+/*.cl2
+/*.CL2
+/*.zip

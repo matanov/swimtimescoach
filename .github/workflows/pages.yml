@@ -1,5 +1,5 @@
 # Every push to main: run the tests, then publish the app to GitHub Pages.
-# Only the files the app needs are published (index.html, src/, vendor/),
+# Only the files the app needs are published (index.html, converter.html, src/, vendor/),
 # plus the generated src/share-template.js used by "Share as file".
 name: Test and deploy
 
@@ -39,7 +39,7 @@ jobs:
         run: |
           node tools/build-share.js
           mkdir _site
-          cp -r index.html swimtimescoach.html demo.html src vendor _site/
+          cp -r index.html converter.html swimtimescoach.html demo.html src vendor _site/
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

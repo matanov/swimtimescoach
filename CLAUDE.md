@@ -48,6 +48,13 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - The app can't fetch JSON at run time (CSP `connect-src 'none'`), so the script also writes `src/standards-efsl.js` (window.EFSL / require); a test checks it equals the JSON. It's one of the inlined scripts in `tools/build-share.js`.
 - EFSL quals: `qualifyingChamp(standards, swim, age, sex)` in cl2.js; the app passes the person's latest age (`p.lastAge`), never the age at the swim. Equal to the standard qualifies. `qbox` in app.js draws the box (`.q-ld` solid, `.q-sd` dashed).
 
+## SD3 course converter
+- `converter.html` is a separate page with the same CSP; logic in `src/sd3convert.js` (browser `window.SD3Convert` / Node `require`), DOM in `src/converter.js`, styles in `src/converter.css` on top of `src/styles.css`.
+- It rewrites only the 8-char time fields and their course codes (D0 cols 89–124, E0 cols 46–81, B1 col 150) and must keep every other byte, line length and line ending; `build` throws if a line length changes. Keep the file's code style (`1`/`S` digits vs letters).
+- Standard conversion = Swim England equivalent-time formula (turn factors `TF`, yards pool measures `PMY`). Events without a factor are skipped and listed, never guessed. Tests: `tests/sd3convert.test.js` (synthetic sample only).
+- Coach review (step 5): `review(parsed, opts)` returns one row per entry in the chosen fields with original, relabeled and converted times (converted = custom if chosen, else standard) and a status (`change`/`same`/`nt`/`skipped`/`excluded`); `reviewCSV` writes it. Printing the page prints only the report (`@media print` in converter.css).
+- It's not part of the one-file app. index.html links to it from the header, the help dialog and the footer, all marked `data-site-only` so `build-share` strips them.
+
 ## Docs
 - README screenshots (`docs/images/`) show only the synthetic team from `python3 tools/make_sample_data.py` (`docs/sample-data/`), never real or anonymized-real data: anonymized files keep real times, which can be matched to public results.
 - The in-app help (`#help` dialog in `index.html`) and the README user guide say the same things; update both when behavior changes.

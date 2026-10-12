@@ -1,0 +1,137 @@
+/* SD3 course converter page (converter.html). Loaded after styles.css, which
+   provides the fonts, theme tokens and .btn. Layout: one working column of
+   four steps (file, stats, convert, preview). */
+:root{
+  --scm:#0F7C86; --scy:#A8640B; --lcm:var(--pool); --nt:#7D8C98; --chip-ink:#FFFFFF;
+  --ok:#1F7A4A; --warn:#A8640B; --bad:#B3263A; --sunk:var(--pool-tint);
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media screen and (prefers-color-scheme: dark){
+  :root{--scm:#3FC1C9; --scy:#E2A24B; --nt:#7B8C99; --chip-ink:#08131B;
+        --ok:#5FCF8F; --warn:#E2A24B; --bad:#FF6B7D}
+}
+[hidden]{display:none!important}
+.cv{max-width:980px;margin:0 auto;padding-inline:20px;padding-block:0 64px}
+.cv-top{border-bottom:3px solid var(--ink);padding:28px 0 14px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:end;justify-content:space-between}
+.cv-top h1{text-transform:uppercase;font-size:clamp(30px,5vw,42px)}
+.lane{display:block;height:6px;margin-top:10px;width:180px;background:repeating-linear-gradient(90deg,var(--lane) 0 10px,transparent 10px 14px,var(--pool) 14px 24px,transparent 24px 28px)}
+.tag{color:var(--muted);max-width:46ch;margin:0;font-size:14px}
+.tag a{color:var(--pool)}
+.step{padding-block:26px;border-bottom:1px solid var(--line);display:grid;gap:14px}
+.step-h{display:flex;gap:12px;align-items:baseline}
+.step-n{font:700 15px "Barlow Condensed","Arial Narrow",sans-serif;color:var(--lane);letter-spacing:.08em}
+.cv h2{font:600 24px "Barlow Condensed","Arial Narrow",sans-serif;margin:0;text-transform:uppercase;letter-spacing:.03em;text-wrap:balance}
+.cv h3{font:600 17px "Barlow Condensed","Arial Narrow",sans-serif;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.cv p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.cv code,.mono{font-family:var(--mono);font-size:.9em}
+
+.drop{border:2px dashed var(--line);border-radius:10px;background:var(--surface);padding:22px;display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;justify-content:space-between}
+.drop.over{border-color:var(--pool);background:var(--pool-tint)}
+.drop .fname{font-family:var(--mono);font-size:14px;word-break:break-all;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;min-width:0}
+.badge{display:inline-block;font:600 13px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:3px;background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.badge.sample{color:var(--warn);border-color:var(--warn)}
+
+.meet{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+#counts{grid-template-columns:repeat(3,1fr)}
+.meet>div{background:var(--surface);padding:10px 14px;min-width:0}
+.k{font:500 13px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.v{font-weight:600;overflow-wrap:anywhere}
+.v.big{font:700 30px/1.1 "Barlow Condensed","Arial Narrow",sans-serif;font-variant-numeric:tabular-nums}
+
+.c{display:inline-block;min-width:3.3em;text-align:center;font:700 13px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.06em;padding:1px 6px;border-radius:3px;color:var(--chip-ink)}
+.c.SCM{background:var(--scm)} .c.LCM{background:var(--lcm)} .c.SCY{background:var(--scy)} .c.NT{background:var(--nt)}
+
+.bars{display:grid;gap:8px}
+.bar-row{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center}
+.bar{display:flex;height:22px;border-radius:3px;overflow:hidden;background:var(--sunk)}
+.bar span{display:flex;align-items:center;justify-content:center;font:12px var(--mono);color:var(--chip-ink);min-width:0;overflow:hidden;white-space:nowrap}
+.bar .SCM{background:var(--scm)} .bar .LCM{background:var(--lcm)} .bar .SCY{background:var(--scy)} .bar .NT{background:var(--nt)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.tbl-wrap.tall{max-height:440px;overflow-y:auto}
+.cv table{border-collapse:collapse;width:100%;font-size:14px}
+.cv th,.cv td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.cv th{font:600 13px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--sunk);position:sticky;top:0}
+.cv td.n,.cv th.n{text-align:right;font-variant-numeric:tabular-nums}
+.cv td.t{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.cv tr:last-child td{border-bottom:0}
+.delta-up{color:var(--bad)} .delta-down{color:var(--ok)}
+.zero{color:var(--line)}
+
+.cv details{background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.cv details>summary{cursor:pointer;padding:10px 14px;font:600 16px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.05em;text-transform:uppercase}
+.cv details>.inner{padding:0 14px 14px;display:grid;gap:10px}
+
+.note{border-left:4px solid var(--warn);background:var(--surface);padding:10px 14px;border-radius:0 6px 6px 0;display:grid;gap:4px}
+.note.bad{border-left-color:var(--bad)}
+.note.info{border-left-color:var(--pool)}
+
+.opts{display:grid;gap:18px}
+.field{display:grid;gap:4px}
+.seg{display:inline-flex;justify-self:start;border:2px solid var(--ink);border-radius:6px;overflow:hidden}
+.seg label{cursor:pointer;position:relative}
+.seg input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}
+.seg span{display:block;padding:8px 22px;font:700 20px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.06em}
+.seg input:checked+span{background:var(--ink);color:var(--bg)}
+.seg input:focus-visible+span{outline:3px solid var(--pool);outline-offset:-3px}
+.methods{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+label.opt{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer}
+label.opt:has(input:checked){border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+label.opt:focus-within{outline:2px solid var(--pool);outline-offset:2px}
+label.opt input{margin-top:4px;accent-color:var(--lane)}
+label.opt b{font:600 18px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.03em;text-transform:uppercase}
+label.opt .d{grid-column:2;font-size:13.5px;color:var(--muted)}
+.checks{display:flex;flex-wrap:wrap;gap:8px 18px}
+.checks label{display:inline-flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap}
+.checks input{accent-color:var(--lane)}
+.custom{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.field input[type=number]{font:15px var(--mono);padding:7px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+.summary{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline}
+.summary .v.big{font-size:26px}
+ol.how{margin:0;padding-left:22px;display:grid;gap:6px;max-width:72ch}
+.prose{display:grid;gap:8px;max-width:72ch}
+@media (max-width:520px){.bar-row{grid-template-columns:1fr;gap:4px}.seg span{padding:8px 16px}}
+
+/* Coach review report: a paper-like sheet on screen, the only thing printed. */
+.report{border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:18px 20px;max-height:680px;overflow:auto;display:grid;gap:12px}
+.rep-kicker{font:600 13px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--lane)}
+.cv h3.rep-title{font:700 26px/1.1 "Barlow Condensed","Arial Narrow",sans-serif;color:var(--ink);letter-spacing:.01em;text-transform:none;margin-top:2px}
+.rep-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2px 20px;font-size:13.5px;margin-top:8px}
+.rep-meta .k{margin-right:4px}
+.rep-meta>div{min-width:0;overflow-wrap:anywhere}
+.cv .rep-sum{font-size:14px;margin-top:6px}
+.rep-tbl{overflow-x:auto}
+.cv table.rep{font-size:13.5px}
+.cv table.rep th,.cv table.rep td{padding:4px 8px}
+.cv table.rep thead th{position:sticky;top:0}
+.cv table.rep tr.grp th{background:transparent;color:var(--ink);font:600 15px Barlow,"Segoe UI",sans-serif;letter-spacing:0;text-transform:none;padding-top:12px;border-bottom:2px solid var(--ink);position:static}
+.rt{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.rt.strong{font-weight:700}
+.rc{margin-left:3px;font:600 11px "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.06em;color:var(--muted)}
+.cv td.note-c{white-space:normal;min-width:180px;color:var(--muted);font-size:12.5px}
+.cv tr.st-same td,.cv tr.st-nt td,.cv tr.st-excluded td{color:var(--muted)}
+.cv tr.st-skipped td.note-c{color:var(--warn)}
+.cv tr.odd td.note-c{color:var(--bad);font-weight:600}
+td.tick,th.tick{width:34px;text-align:center}
+.box{display:inline-block;width:14px;height:14px;border:1.5px solid var(--ink);border-radius:2px;vertical-align:middle}
+.rep-sign{display:grid;grid-template-columns:2fr 1fr 2fr;gap:24px;margin-top:18px}
+.rep-sign span{border-top:1px solid var(--ink);padding-top:4px;font-size:12px;color:var(--muted)}
+
+@media print{
+  .cv{max-width:none;padding:0}
+  .cv-top,.cv>section:not(#s5),#s5>.step-h,#s5>p,.noprint{display:none!important}
+  .step{padding:0;border:0}
+  .report{border:0;padding:0;max-height:none;overflow:visible;background:#fff}
+  .rep-tbl{overflow:visible}
+  .cv table.rep{font-size:10.5px}
+  .cv table.rep th,.cv table.rep td{padding:2px 6px}
+  .cv table.rep thead{display:table-header-group}
+  .cv table.rep thead th{position:static;background:#eee;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cv table.rep tr{break-inside:avoid}
+  .cv table.rep tr.grp{break-after:avoid}
+  .rep-sign{break-inside:avoid}
+}
