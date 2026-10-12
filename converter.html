@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- SD3 Course Converter, part of Swim Times Coach, https://swimtimescoach.com
+     MIT License, Copyright (c) 2026 Panteley Matanov: https://github.com/matanov/swimtimescoach/blob/main/LICENSE
+     Includes the Barlow fonts (SIL Open Font License 1.1, The Barlow Project Authors: https://openfontlicense.org). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Same privacy guarantee as the app: own files only, nothing sent anywhere. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>SD3 Course Converter</title>
+<link rel="stylesheet" href="src/styles.css">
+<link rel="stylesheet" href="src/converter.css">
+</head>
+<body>
+<main class="cv">
+<header class="cv-top">
+  <div>
+    <h1>SD3 Course Converter</h1>
+    <span class="lane" aria-hidden="true"></span>
+  </div>
+  <p class="tag">Relabel or convert SCM, SCY and LCM times in TeamUnify / Hy-Tek SDIF files (.sd3, .cl2). Everything runs in this browser. Your file is never uploaded. Part of <a href="index.html">Swim Times Coach</a>.</p>
+</header>
+
+<section class="step" id="s1">
+  <div class="step-h"><span class="step-n">STEP 1</span><h2>Open a file</h2></div>
+  <div class="drop" id="cvDrop">
+    <div class="row" style="min-width:0">
+      <span class="badge sample" id="srcBadge">Sample</span>
+      <span class="fname" id="fname">built-in example (fictional swimmers)</span>
+    </div>
+    <div class="row">
+      <input type="file" id="file" accept=".sd3,.cl2,.sdif,.txt" hidden>
+      <button class="btn primary" id="pick">Choose .sd3 / .cl2</button>
+      <button class="btn" id="loadSample">Reload sample</button>
+    </div>
+  </div>
+  <p class="small muted">Or drag the file onto the box. Unzip <code>.sd3_ext.zip</code> downloads first. Showing a sample until you open your own file.</p>
+  <div id="loadErr" class="note bad" hidden></div>
+</section>
+
+<section class="step" id="s2">
+  <div class="step-h"><span class="step-n">STEP 2</span><h2>What's in the file</h2></div>
+  <div class="meet" id="meet"></div>
+  <div class="meet" id="counts"></div>
+  <h3>Times by course</h3>
+  <div class="bars" id="bars"></div>
+  <div class="legend">
+    <span><span class="c SCM">SCM</span> short course meters</span>
+    <span><span class="c SCY">SCY</span> short course yards</span>
+    <span><span class="c LCM">LCM</span> long course meters</span>
+    <span><span class="c NT">NT</span> no time / status</span>
+  </div>
+  <div class="tbl-wrap"><table id="courseTbl"></table></div>
+  <details>
+    <summary>By event</summary>
+    <div class="inner"><div class="tbl-wrap"><table id="eventTbl"></table></div></div>
+  </details>
+  <div id="oddBox"></div>
+</section>
+
+<section class="step" id="s3">
+  <div class="step-h"><span class="step-n">STEP 3</span><h2>Convert</h2></div>
+  <div class="opts">
+    <div class="field">
+      <span class="k">Make every time</span>
+      <div class="seg" role="radiogroup" aria-label="Target course">
+        <label><input type="radio" name="tgt" id="tgtLCM" value="LCM" checked><span>LCM</span></label>
+        <label><input type="radio" name="tgt" id="tgtSCM" value="SCM"><span>SCM</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <span class="k">How</span>
+      <div class="methods">
+        <label class="opt"><input type="radio" name="method" id="mRelabel" value="relabel" checked><b>Relabel only</b>
+          <span class="d">Keep every time exactly as is. Only the course code changes.</span></label>
+        <label class="opt"><input type="radio" name="method" id="mStd" value="standard"><b>Standard conversion</b>
+          <span class="d">Swim England equivalent-time formula, per stroke and distance, accounting for turns.</span></label>
+        <label class="opt"><input type="radio" name="method" id="mCustom" value="custom"><b>Custom factor</b>
+          <span class="d">Multiply by your own factor per source course, plus optional seconds per 100.</span></label>
+      </div>
+    </div>
+    <div class="custom" id="customBox" hidden></div>
+    <div class="field">
+      <span class="k">Convert times currently in</span>
+      <div class="checks" id="srcChecks"></div>
+    </div>
+    <div class="field">
+      <span class="k">Time fields</span>
+      <div class="checks">
+        <label><input type="checkbox" id="fSeed" checked> Seed</label>
+        <label><input type="checkbox" id="fPrelim" checked> Prelim</label>
+        <label><input type="checkbox" id="fSwimoff" checked> Swim-off</label>
+        <label><input type="checkbox" id="fFinals" checked> Finals</label>
+        <label><input type="checkbox" id="fRelay" checked> Include relays</label>
+        <label><input type="checkbox" id="fMeet" checked> Set meet course to target</label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="step" id="s4">
+  <div class="step-h"><span class="step-n">STEP 4</span><h2>Preview and save</h2></div>
+  <div class="summary" id="summary"></div>
+  <div id="warnBox"></div>
+  <div class="tbl-wrap tall"><table id="chgTbl"></table></div>
+  <div class="row">
+    <button class="btn primary" id="dl">Save converted file</button>
+    <span class="small muted" id="dlName"></span>
+  </div>
+  <p class="small muted">The original file is not changed. The saved copy goes to your browser's download folder. Import that copy into SwimCloud or the meet host.</p>
+</section>
+
+<section class="step" id="s5">
+  <details open>
+    <summary>Instructions and method notes</summary>
+    <div class="inner prose">
+      <ol class="how">
+        <li>Export the entries or results from TeamUnify. Unzip it if it arrives as a <code>.zip</code>.</li>
+        <li>Open the file here with <b>Choose .sd3 / .cl2</b> or drag it onto the box.</li>
+        <li>Check Step 2: how many times are SCM, SCY, LCM, and any unusual times to fix in TeamUnify first.</li>
+        <li>Pick the target course, then the method. The preview updates as you change options.</li>
+        <li>Review the changes and any skipped lines, then <b>Save converted file</b>.</li>
+      </ol>
+      <p><b>Relabel only</b> changes the course letter and nothing else. A short course time relabeled as long course is still a short course swim, usually faster than the swimmer would go in a 50 m pool. Use it only when the meet host accepts that, or when the course code itself was wrong.</p>
+      <p><b>Standard conversion</b> uses the Swim England equivalent-time formula. It models the speed gained from each turn, with a separate turn factor for each stroke and distance, plus a yards-to-meters measure for SCY times. Results are rounded to the hundredth. Events without a published factor (25s, 100 IM) and yard seeds on 400/800 free are skipped and listed. Relays are converted leg by leg, assuming four equal splits.</p>
+      <p><b>Custom factor</b> multiplies each time by the factor you enter for its source course, then adds the seconds-per-100 offset scaled to the distance. The defaults are common rules of thumb: +2% for SCM to LCM, ×1.11 for SCY to SCM.</p>
+      <p>Only the 8-character time fields and their course codes are rewritten. Every other byte, line length and line ending is kept, so the file stays valid SDIF.</p>
+    </div>
+  </details>
+</section>
+</main>
+<script src="src/sd3convert.js"></script>
+<script src="src/converter.js"></script>
+</body>
+</html>
