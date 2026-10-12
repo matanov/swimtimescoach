@@ -43,6 +43,11 @@ in your browser with everything built in: it works offline, needs no install,
 and keeps the same privacy protections. It doesn't update itself, so download
 it again now and then for new features.
 
+Getting entries ready for a meet? The **[SD3 course converter](https://swimtimescoach.com/converter.html)**
+fixes SCM/LCM seed courses in a TeamUnify `.sd3` file (see
+[below](#sd3-course-converter)). It's linked at the top of the app and in
+**Help & privacy**.
+
 Want to try it first? Download the five `.cl2` files in
 [`docs/sample-data/`](docs/sample-data) (a made-up team, safe to share) and
 add them to the app.
@@ -142,7 +147,9 @@ team, "400/500 Free" when both appear).
 **[swimtimescoach.com/converter.html](https://swimtimescoach.com/converter.html)**
 fixes course codes in a TeamUnify `.sd3` entries file or a Hy-Tek `.cl2`
 results file, for example when SCM best times are submitted as seeds for a
-long course meet. Like the app, it runs entirely in your browser.
+long course meet. Like the app, it runs entirely in your browser. Open it from
+the link at the top of the app, from **Help & privacy**, or from the footer.
+It's a page of the website only, not part of the downloadable one-file app.
 
 1. Open the `.sd3` or `.cl2` file (unzip TeamUnify's `.sd3_ext.zip` first).
 2. Check what's in it: meet, dates, meet course, how many seed, prelim,

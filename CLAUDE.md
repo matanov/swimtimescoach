@@ -53,7 +53,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - It rewrites only the 8-char time fields and their course codes (D0 cols 89–124, E0 cols 46–81, B1 col 150) and must keep every other byte, line length and line ending; `build` throws if a line length changes. Keep the file's code style (`1`/`S` digits vs letters).
 - Standard conversion = Swim England equivalent-time formula (turn factors `TF`, yards pool measures `PMY`). Events without a factor are skipped and listed, never guessed. Tests: `tests/sd3convert.test.js` (synthetic sample only).
 - Coach review (step 5): `review(parsed, opts)` returns one row per entry in the chosen fields with original, relabeled and converted times (converted = custom if chosen, else standard) and a status (`change`/`same`/`nt`/`skipped`/`excluded`); `reviewCSV` writes it. Printing the page prints only the report (`@media print` in converter.css).
-- It's not part of the one-file app; the footer link to it is `data-site-only`.
+- It's not part of the one-file app. index.html links to it from the header, the help dialog and the footer, all marked `data-site-only` so `build-share` strips them.
 
 ## Docs
 - README screenshots (`docs/images/`) show only the synthetic team from `python3 tools/make_sample_data.py` (`docs/sample-data/`), never real or anonymized-real data: anonymized files keep real times, which can be matched to public results.
