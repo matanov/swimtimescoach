@@ -8,7 +8,7 @@
     "Times are exactly as printed (M:SS.hh; some printed with a leading 0:).",
     "sex: F = girls, M = boys (SDIF sex codes).",
     "An event missing for an age group means the source has no time for it.",
-    "The source doesn't say how age is determined (e.g. age on a cutoff date) or whether a time equal to the standard qualifies."
+    "Age is the swimmer's age on the championship's first day (date). The source doesn't say whether a time equal to the standard qualifies; the app counts it."
   ],
   "ageGroups": [
     {
@@ -61,6 +61,7 @@
     {
       "id": "long-distance",
       "name": "Long Distance Champs",
+      "date": "2026-11-27",
       "standards": {
         "SCM": {
           "100 Back": {
@@ -563,6 +564,7 @@
     {
       "id": "short-distance",
       "name": "Short Distance Champs",
+      "date": "2027-02-27",
       "standards": {
         "SCM": {
           "50 Back": {

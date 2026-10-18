@@ -163,6 +163,10 @@ table.near td{padding:4px 8px}
 table.near tr.near-first td{border-top:1px solid var(--ink)}
 table.near tbody tr:first-child td{border-top:0}
 .near-age{color:var(--muted);font-size:.8rem}
+.near-dates{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 20px;border-bottom:1px solid var(--line);font-size:.88rem}
+.near-dates .k{color:var(--muted)}
+.near-dates label{display:inline-flex;align-items:center;gap:6px}
+.near-dates input{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--bg);color:var(--ink)}
 #nearPrint{display:none}
 
 #printhead,#appendix{display:none}

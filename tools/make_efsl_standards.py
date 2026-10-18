@@ -131,7 +131,9 @@ TIME = re.compile(r"^(?:(\d{1,2}):)?\d{2}\.\d{2}$")
 
 def build():
     champs = []
-    for cid, name in [("long-distance", "Long Distance Champs"), ("short-distance", "Short Distance Champs")]:
+    # date: the championship's first day, when each swimmer's age is taken (EFSL rule);
+    # the app uses it as the default and lets the user change it
+    for cid, name, date in [("long-distance", "Long Distance Champs", "2026-11-27"), ("short-distance", "Short Distance Champs", "2027-02-27")]:
         standards = {}
         for course in ("SCM", "LCM"):
             order, by_group = COLUMNS[cid][course]
@@ -146,7 +148,7 @@ def build():
                         raise SystemExit(f"{cid} {course} {age} {sex} {ev}: bad time {t}")
                     table[ev].setdefault(age, {})[sex] = t
             standards[course] = table
-        champs.append({"id": cid, "name": name, "standards": standards})
+        champs.append({"id": cid, "name": name, "date": date, "standards": standards})
     return {
         "id": "efsl-2025-2028",
         "title": "EFSL Championship Qualification Times 2025-2028",
@@ -157,7 +159,7 @@ def build():
             "Times are exactly as printed (M:SS.hh; some printed with a leading 0:).",
             "sex: F = girls, M = boys (SDIF sex codes).",
             "An event missing for an age group means the source has no time for it.",
-            "The source doesn't say how age is determined (e.g. age on a cutoff date) or whether a time equal to the standard qualifies.",
+            "Age is the swimmer's age on the championship's first day (date). The source doesn't say whether a time equal to the standard qualifies; the app counts it.",
         ],
         "ageGroups": [{"id": a, "minAge": lo, "maxAge": hi} for a, lo, hi in AGE_GROUPS],
         "championships": champs,

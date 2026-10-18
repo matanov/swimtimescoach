@@ -118,13 +118,52 @@ function assignPeople(swims){
     const key = byName.get(nk).size > 1 ? nk + "|" + (s.swimmer.ussNew.toUpperCase() || "?") : nk;
     s.pkey = key;
     let p = people.get(key);
-    if (!p) { p = {key, last:s.swimmer.last, first:s.swimmer.pref || s.swimmer.first, teams:new Set(), sex:s.swimmer.sex, count:0, lastAge:null, lastDate:""}; people.set(key, p); }
+    if (!p) { p = {key, last:s.swimmer.last, first:s.swimmer.pref || s.swimmer.first, teams:new Set(), sex:s.swimmer.sex, count:0, lastAge:null, lastDate:"", births:new Set()}; people.set(key, p); }
     p.teams.add(s.teamName); p.count++;
+    const b = birthOf(s); if (b) p.births.add(b);
     if (s.swimmer.pref) p.first = s.swimmer.pref;
     if ((s.date||"") >= p.lastDate) { p.lastDate = s.date || ""; p.lastAge = s.age; }
   }
+  // a birth date only counts when every swim agrees on it
+  for (const p of people.values()) { p.birth = p.births.size === 1 ? [...p.births][0] : null; delete p.births; }
   return people;
 }
+
+/* ------------------------------------------------------------------ birth dates and ages
+   SDIF has a birth date field, but exports often leave it blank. USA Swimming IDs
+   start with the birth date (MMDDYY), so it's read from those too, and trusted only
+   when the age it gives on the swim date matches the age in the results. Birth
+   dates are only used to work out ages; the app never shows or exports them. */
+function ageOn(birth, date){
+  const [by, bm, bd] = birth.split("-").map(Number), [y, m, d] = date.split("-").map(Number);
+  return y - by - ((m < bm || (m === bm && d < bd)) ? 1 : 0);
+}
+function birthFromId(id, swimDate, age){
+  const m = /^(\d\d)(\d\d)(\d\d)/.exec(id || "");
+  if (!m || !swimDate || age == null || +m[1] < 1 || +m[1] > 12 || +m[2] < 1 || +m[2] > 31) return null;
+  for (const yr of [2000 + +m[3], 1900 + +m[3]]) {
+    const b = `${yr}-${m[1]}-${m[2]}`;
+    if (ageOn(b, swimDate) === age) return b;
+  }
+  return null;
+}
+function birthOf(s){
+  const sw = s.swimmer;
+  if (sw.bdate && s.date && s.age != null && ageOn(sw.bdate, s.date) === s.age) return sw.bdate;
+  return birthFromId(sw.ussNew, s.date, s.age) || birthFromId(sw.uss, s.date, s.age);
+}
+// The age to judge a person at for a championship: their age on its first day
+// (dates[champ.id] overrides champ.date), from their birth date or, in a shared file
+// that has no birth dates, from the ages it carries (person.champAges); otherwise
+// their latest age in the results.
+function ageAt(person, champ, dates){
+  const d = (dates && dates[champ.id]) || champ.date;
+  if (person.birth && d) return ageOn(person.birth, d);
+  if (person.champAges && person.champAges[champ.id] != null) return person.champAges[champ.id];
+  return person.lastAge;
+}
+// Whether ageAt used the championship date (a birth date or shared ages) rather than the latest age.
+const ageAtChamp = person => !!(person.birth || person.champAges);
 
 // Different meets can share a name (the same invitational every year, or two
 // clubs' "Winter Open" on one weekend). They stay separate meets; this sets
@@ -204,16 +243,17 @@ function courseBests(list){
    Each event belongs to one championship per age group; if there were ever two,
    the one met (else the nearest) is returned. */
 function standardFor(standards, s, age, sex){
-  if (!standards || s.time.cs == null || age == null || (s.course !== "SCM" && s.course !== "LCM")) return null;
-  const g = standards.ageGroups.find(g => (g.minAge == null || age >= g.minAge) && age <= g.maxAge);
-  if (!g) return null;
+  if (!standards || s.time.cs == null || (s.course !== "SCM" && s.course !== "LCM")) return null;
   const ev = `${s.dist} ${STROKES[s.stroke]}`;
   let best = null;
   for (const c of standards.championships) {
-    const t = c.standards[s.course]?.[ev]?.[g.id]?.[sex];
+    const a = typeof age === "function" ? age(c) : age;   // the age can differ per championship date
+    if (a == null) continue;
+    const g = standards.ageGroups.find(g => (g.minAge == null || a >= g.minAge) && a <= g.maxAge);
+    const t = g && c.standards[s.course]?.[ev]?.[g.id]?.[sex];
     if (!t) continue;
     const std = parseTime(t, "").cs, gap = Math.max(0, s.time.cs - std);
-    if (!best || gap < best.gap) best = {champ: c.id, standard: std, gap, meets: gap === 0, ageGroup: g.id};
+    if (!best || gap < best.gap) best = {champ: c.id, standard: std, gap, meets: gap === 0, ageGroup: g.id, age: a};
   }
   return best;
 }
@@ -227,11 +267,11 @@ function qualifyingChamp(standards, s, age, sex){
 // SCM or LCM has qualified for that event. Returns the set of "pkey|dist|stroke" keys
 // that are qualified (judged at each person's latest age); people: key -> person.
 const eventKey = s => `${s.pkey}|${s.dist}|${s.stroke}`;
-function qualifiedEvents(standards, swims, people){
+function qualifiedEvents(standards, swims, people, dates){
   const done = new Set();
   for (const s of swims) {
     const p = people.get(s.pkey);
-    if (p && !done.has(eventKey(s)) && standardFor(standards, s, p.lastAge, p.sex)?.meets) done.add(eventKey(s));
+    if (p && !done.has(eventKey(s)) && standardFor(standards, s, c => ageAt(p, c, dates), p.sex)?.meets) done.add(eventKey(s));
   }
   return done;
 }
@@ -242,7 +282,7 @@ function qualifiedEvents(standards, swims, people){
 // gapPct = time still to drop / standard * 100. people: key ->
 // person (assignPeople); only their swims count. Sorted by championship (as listed in
 // standards), then last and first name, stroke, distance, course.
-function nearStandards(standards, swims, people, pct){
+function nearStandards(standards, swims, people, pct, dates){
   const best = new Map();
   for (const s of swims) {
     if (!people.has(s.pkey) || s.time.cs == null) continue;
@@ -250,11 +290,11 @@ function nearStandards(standards, swims, people, pct){
     if (!b || s.time.cs < b.time.cs) best.set(k, s);
   }
   const champOrder = new Map((standards?.championships || []).map((c, i) => [c.id, i]));
-  const qualified = qualifiedEvents(standards, best.values(), people);
+  const qualified = qualifiedEvents(standards, best.values(), people, dates);
   const rows = [];
   for (const s of best.values()) {
     if (qualified.has(eventKey(s))) continue;
-    const person = people.get(s.pkey), q = standardFor(standards, s, person.lastAge, person.sex);
+    const person = people.get(s.pkey), q = standardFor(standards, s, c => ageAt(person, c, dates), person.sex);
     if (!q || q.meets) continue;
     const gapPct = q.gap / q.standard * 100;
     if (gapPct <= pct + 1e-9) rows.push({person, swim: s, ...q, gapPct});
@@ -292,9 +332,30 @@ function trimToSwimmers(text, keys, team = null){
   return swims ? out.join("\r\n") + "\r\n" : "";
 }
 
+// For shared files: swaps each USS ID (D0 cols 40-51, D3 cols 3-16) for a stand-in
+// that keeps the same swimmers apart but holds no birth date. The same ID gets the same
+// stand-in in every file. Returns {texts, key}: the new texts, and key(personKey) giving
+// the person key the masked files produce (it differs only for same-name swimmers told
+// apart by ID, see assignPeople).
+function maskIds(texts){
+  const map = new Map();
+  const token = id => { id = id.toUpperCase(); if (!map.has(id)) map.set(id, "ID" + String(map.size + 1).padStart(5, "0")); return map.get(id); };
+  const put = (line, start, len, val) => line.slice(0, start - 1) + val.padEnd(len).slice(0, len) + line.slice(start - 1 + len);
+  const out = texts.map(text => text.replace(/^(D0|D3)[^\r\n]*/gm, raw => {
+    const line = raw.padEnd(160), [start, len] = raw.startsWith("D0") ? [40, 12] : [3, 14];
+    const id = f(line, start, len);
+    if (!id) return raw;
+    const o = put(line, start, len, token(id));
+    return raw.length < 160 ? o.slice(0, Math.max(raw.length, start - 1 + len)).trimEnd() : o;
+  }));
+  const key = k => { const p = k.split("|"); return p.length > 2 && map.has(p[2]) ? `${p[0]}|${p[1]}|${map.get(p[2])}` : k; };
+  return {texts: out, key};
+}
+
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
               listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor, nearStandards, qualifiedEvents,
+              ageOn, birthFromId, ageAt, ageAtChamp, maskIds,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

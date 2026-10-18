@@ -107,13 +107,19 @@ made-up sample team in [`docs/sample-data/`](docs/sample-data).*
 
 **EFSL quals** (checkbox on the Columns line) boxes the times that meet the
 European Forces Swim League 2025–2028 championship standards: solid for Long
-Distance Champs, dashed for Short Distance Champs. Times that don't qualify yet
+Distance Champs, dashed for Short Distance Champs. Each swimmer is judged at
+their **age on the championship's first day** (Long Distance 27 Nov 2026,
+Short Distance 27 Feb 2027; the dates can be changed in the Close to qualifying
+window), worked out from the birth date in their USS ID; without one, their
+latest age in the results is used. Birth dates are only used to work out ages:
+they're never shown or exported, and shared files replace the IDs with
+stand-ins and carry each swimmer's age at the championships instead. Times that don't qualify yet
 show how much they still need to drop (e.g. `−0.84`), underlined solid or dashed
 for the championship whose standard it is, in the table, the swim history,
-prints and shared files. Each swim is judged at the
-swimmer's **latest** age, so a time that met the 11-year-old standard doesn't
-count once the swimmer is 12 unless it also meets the 12 standard; a time equal
-to the standard counts. Only SCM and LCM (EFSL has no yards standards). The
+prints and shared files. Every swim is judged at the swimmer's age at the
+championship (see above), so a time that met the 12-year-old standard doesn't
+count if the swimmer will be 13 by the championship, unless it also meets the
+13 standard; a time equal to the standard counts. Only SCM and LCM (EFSL has no yards standards). The
 boxes print, and shared files keep them, legend included.
 
 **Close to qualifying…** (next to EFSL quals) opens a report of the selected

@@ -81,7 +81,7 @@ test("a swim that hasn't qualified reports how much it still needs to drop", () 
   const sf = (dist, stroke, course, time, age, sex) => CL2.standardFor(EFSL, swim(dist, stroke, course, time), age, sex);
   // 12 F 800 Free SCM standard (Long Distance) is 13:09.89
   assert.deepEqual(sf(800, "1", "SCM", "13:12.00", 12, "F"),
-    { champ: "long-distance", standard: CL2.parseTime("13:09.89", "").cs, gap: 211, meets: false, ageGroup: "12" });
+    { champ: "long-distance", standard: CL2.parseTime("13:09.89", "").cs, gap: 211, meets: false, ageGroup: "12", age: 12 });
   assert.equal(sf(800, "1", "SCM", "13:09.89", 12, "F").gap, 0);                     // equal: met, no gap
   assert.equal(sf(800, "1", "SCM", "13:00.00", 12, "F").meets, true);
   // 13 M 100 Back LCM standard (Short Distance) is 1:29.59: the gap is per course
@@ -124,4 +124,50 @@ test("close-to-qualifying report lists best times within the chosen % of a stand
   // exactly at the limit counts: 2.55...% for Anna
   const exact = at5[0].gapPct;
   assert.equal(CL2.nearStandards(EFSL, swims, people, exact).filter(r => r.person.first === "Anna").length, 1);
+});
+
+test("birth dates come from USS IDs only when they match the ages in the results", () => {
+  assert.equal(CL2.ageOn("2013-11-30", "2026-11-27"), 12);   // birthday three days after champs
+  assert.equal(CL2.ageOn("2013-11-27", "2026-11-27"), 13);   // birthday on the first day counts
+  assert.equal(CL2.birthFromId("113013ANNAZETA", "2025-10-11", 11), "2013-11-30");
+  assert.equal(CL2.birthFromId("113013ANNAZETA", "2025-10-11", 12), null);    // age doesn't match: not a birth date
+  assert.equal(CL2.birthFromId("ID00001", "2025-10-11", 11), null);
+  assert.equal(CL2.birthFromId("133013XXXX", "2025-10-11", 11), null);       // month 13
+});
+
+test("swimmers are judged at their age on each championship's first day", () => {
+  const LD = EFSL.championships.find(c => c.id === "long-distance"), SD = EFSL.championships.find(c => c.id === "short-distance");
+  assert.deepEqual([LD.date, SD.date], ["2026-11-27", "2027-02-27"]);
+  // 12 all season (latest age 12); born 2014-01-15: 12 at LD champs, 13 at SD champs
+  const p = { key: "ANNA", lastAge: 12, sex: "F", birth: "2014-01-15" };
+  assert.deepEqual([CL2.ageAt(p, LD), CL2.ageAt(p, SD)], [12, 13]);
+  assert.equal(CL2.ageAt(p, SD, { "short-distance": "2027-01-10" }), 12);  // a date override moves it
+  assert.equal(CL2.ageAt({ ...p, birth: null }, SD), 12);                  // no birth date: latest age
+  assert.equal(CL2.ageAt({ ...p, birth: null, champAges: { "short-distance": 13 } }, SD), 13);  // ages carried by a shared file
+  // 50 Free SCM 34.00: meets the 12 F Short Distance standard (36.29) but not the 13 one (34.19)
+  const swim = { dist: 50, stroke: "1", course: "SCM", time: CL2.parseTime("34.00", "") }, slow = { ...swim, time: CL2.parseTime("34.50", "") };
+  const at = person => c => CL2.ageAt(person, c);
+  assert.equal(CL2.standardFor(EFSL, swim, at(p), "F").meets, true);
+  const q = CL2.standardFor(EFSL, slow, at(p), "F");
+  assert.deepEqual([q.champ, q.age, q.meets, q.gap], ["short-distance", 13, false, 31]);
+  assert.equal(CL2.standardFor(EFSL, slow, at({ ...p, birth: null }), "F").meets, true);   // at 12 it would qualify
+});
+
+test("people get a birth date from their IDs, and shared files can mask the IDs", () => {
+  const line = (name, id12, age, date) => "D0" + " ".repeat(9) + name.padEnd(28) + id12.padEnd(12) + " ".repeat(12) + String(age).padStart(2) + "F" + "F" +
+    "  50" + "1" + "   1" + "UNOV" + date + " ".repeat(25) + "   34.00S";
+  const text = ["B1         Test Meet" + " ".repeat(90) + "1011202510112025" + " ".repeat(12) + "S",
+    "C1         ZZTEST" + "Test Team",
+    line("Zeta, Anna", "113013ANNAZE", 11, "10112025"), "D3113013ANNAZETAAnna", ""].join("\r\n");
+  const { swims } = CL2.parseCL2(text, "t.cl2");
+  const p = [...CL2.assignPeople(swims).values()][0];
+  assert.equal(p.birth, "2013-11-30");
+  const mk = CL2.maskIds([text]), [masked] = mk.texts;
+  assert.equal(mk.key("ZETA|ANNA|113013ANNAZETA"), "ZETA|ANNA|ID00002");    // same-name split keys follow the stand-ins
+  assert.equal(mk.key("ZETA|ANNA"), "ZETA|ANNA");
+  assert.ok(!/113013/.test(masked));
+  const m = CL2.parseCL2(masked, "t.cl2").swims[0];
+  assert.deepEqual([m.swimmer.uss, m.swimmer.ussNew, m.swimmer.pref], ["ID00001", "ID00002", "Anna"]);
+  assert.equal([...CL2.assignPeople([m]).values()][0].birth, null);
+  assert.equal(masked.split("\r\n").length, text.split("\r\n").length);
 });

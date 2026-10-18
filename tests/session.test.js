@@ -57,3 +57,13 @@ test("a session saved before views existed has no view", async () => {
   zip.file("session.json", JSON.stringify({ app: "cl2-best-times", version: 1, files: [], selected: [] }));
   assert.equal((await readSession(zip)).view, null);
 });
+
+test("sessions keep championship dates, and shared files the ages at the championships", async () => {
+  const bytes = await saveSession(JSZip, { sources: [], selected: [], appendix: false, view: "event",
+    champDates: { "long-distance": "2026-12-04", "bad": "soon" }, champAges: { "ZETA|ANNA": { "long-distance": 12, "short-distance": 13 } } });
+  const s = await reopen(bytes);
+  assert.deepEqual(s.champDates, { "long-distance": "2026-12-04" });
+  assert.deepEqual(s.champAges, { "ZETA|ANNA": { "long-distance": 12, "short-distance": 13 } });
+  const plain = await reopen(await saveSession(JSZip, { sources: [], selected: [], appendix: false }));
+  assert.deepEqual([plain.champDates, plain.champAges], [{}, null]);
+});
