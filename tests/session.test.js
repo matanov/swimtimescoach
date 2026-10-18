@@ -67,3 +67,9 @@ test("sessions keep championship dates, and shared files the ages at the champio
   const plain = await reopen(await saveSession(JSZip, { sources: [], selected: [], appendix: false }));
   assert.deepEqual([plain.champDates, plain.champAges], [{}, null]);
 });
+
+test("sessions keep birth dates entered by hand", async () => {
+  const s = await reopen(await saveSession(JSZip, { sources: [], selected: [], appendix: false, births: { "ZETA|ANNA": "2013-03-20", "X": "nope" } }));
+  assert.deepEqual(s.births, { "ZETA|ANNA": "2013-03-20" });
+  assert.deepEqual((await reopen(await saveSession(JSZip, { sources: [], selected: [], appendix: false }))).births, {});
+});

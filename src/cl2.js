@@ -162,6 +162,18 @@ function ageAt(person, champ, dates){
   if (person.champAges && person.champAges[champ.id] != null) return person.champAges[champ.id];
   return person.lastAge;
 }
+// A birth date entered by hand must agree with every age printed in the results (on
+// the swim date, or the meet's first day, which some meets use). Returns null when it
+// does, else {error} or the first swim it contradicts {date, age, implied}.
+function checkBirth(birth, swims){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birth || "") || isNaN(new Date(birth))) return {error: "not a date"};
+  for (const s of swims) {
+    if (!s.date || s.age == null) continue;
+    const a = ageOn(birth, s.date);
+    if (a !== s.age && !(s.meet?.start && ageOn(birth, s.meet.start) === s.age)) return {date: s.date, age: s.age, implied: a};
+  }
+  return null;
+}
 // Whether ageAt used the championship date (a birth date or shared ages) rather than the latest age.
 const ageAtChamp = person => !!(person.birth || person.champAges);
 
@@ -355,7 +367,7 @@ function maskIds(texts){
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
               listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor, nearStandards, qualifiedEvents,
-              ageOn, birthFromId, ageAt, ageAtChamp, maskIds,
+              ageOn, birthFromId, ageAt, ageAtChamp, maskIds, checkBirth,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

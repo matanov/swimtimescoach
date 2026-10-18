@@ -18,7 +18,7 @@ document.documentElement.classList.remove("nojs");
 document.getElementById("sdetails")?.remove();
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, listTeams,
         pairedDist, columnLabel, courseBests, trimToSwimmers, standardFor, nearStandards, qualifiedEvents,
-        ageAt, ageAtChamp, maskIds, STROKES, COURSE_ORDER } = window.CL2;
+        ageAt, ageAtChamp, maskIds, checkBirth, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -30,7 +30,7 @@ const { saveSession, readSession } = window.Session;
 // champDates: championship dates the user changed ({id: "YYYY-MM-DD"}); ages are taken on each one's first day.
 // sharedAges: {person key: {championship id: age}} from a shared file, whose IDs carry no birth dates.
 const state = { files: [], swims: [], sources: [], selected: new Set(), people: new Map(), view: "course", team: null, efsl: false,
-                champDates: {}, sharedAges: null };
+                champDates: {}, sharedAges: null, births: {} };   // births: entered by hand, {person key: "YYYY-MM-DD"}
 const seenText = new Set();
 
 const teamSwims = () => state.team ? state.swims.filter(s => s.team === state.team) : state.swims;
@@ -43,6 +43,8 @@ const teamName = code => { const t = listTeams(state.swims).find(t => t.code ===
 function rebuildPeople(){
   state.people = assignPeople(teamSwims());
   if (state.sharedAges) for (const p of state.people.values()) if (state.sharedAges[p.key]) p.champAges = state.sharedAges[p.key];
+  // birth dates entered by hand fill in for swimmers whose results have none
+  for (const p of state.people.values()) if (!p.birth && state.births[p.key]) { p.birth = state.births[p.key]; p.birthEntered = true; }
   for (const k of [...state.selected]) if (!state.people.has(k)) state.selected.delete(k);
 }
 
@@ -123,6 +125,7 @@ async function addFiles(fileList){
 function finishLoad(restored = []){
   for (const r of restored) {
     Object.assign(state.champDates, r.champDates || {});
+    Object.assign(state.births, r.births || {});
     if (r.champAges) state.sharedAges = {...state.sharedAges, ...r.champAges};
   }
   rebuildPeople();
@@ -163,7 +166,7 @@ function closeTeamPicker(code){
 
 async function saveSessionFile(){
   try {
-    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team, efsl: state.efsl, champDates: state.champDates});
+    const bytes = await saveSession(JSZip, {sources: state.sources, selected: state.selected, appendix: $("appendixChk").checked, view: state.view, team: state.team, efsl: state.efsl, champDates: state.champDates, births: state.births});
     download(new Blob([bytes], {type:"application/zip"}), `best-times-session-${new Date().toISOString().slice(0,10)}.zip`);
   } catch (e) { $("msg").textContent = `Couldn't save the session: ${e.message}`; }
 }
@@ -292,6 +295,8 @@ function render(){
   const wrap = document.getElementById("wrap");
   // events qualified in either course ("pkey|dist|stroke"): their other-course times show no gap
   state.qualified = state.efsl ? qualifiedEvents(window.EFSL, teamSwims(), state.people, state.champDates) : new Set();
+  const missing = selectedPeople().filter(p => !ageAtChamp(p)).length;
+  $("qmissing").innerHTML = missing ? ` · <span class="agechip">no birth date</span> ${missing} swimmer${missing === 1 ? "" : "s"} judged at latest age` : "";
   const {people, events} = buildGrid();
   if (!state.swims.length) { wrap.innerHTML = `<div class="empty">No results loaded yet.</div>`; return; }
   if (!people.length) { wrap.innerHTML = `<div class="empty">Choose one or more swimmers to build the table.</div>`; return; }
@@ -315,7 +320,7 @@ function render(){
   events.forEach(([, e], i) => { h += `<th scope="col" class="evh${starts[i] ? " gstart" : ""}">${esc(e.label)}</th>`; });
   h += `</tr></thead><tbody>`;
   for (const p of people) {
-    h += `<tr><th class="sw" scope="row"><span class="fn">${esc(p.first)} ${esc(p.last)}</span><span class="tm">${esc([...p.teams].join(", "))}</span></th>`;
+    h += `<tr><th class="sw" scope="row"><span class="fn">${esc(p.first)} ${esc(p.last)}</span><span class="tm">${esc([...p.teams].join(", "))}</span>${state.efsl ? champAgeLine(p) : ""}</th>`;
     events.forEach(([ek, e], i) => {
       const cls = starts[i] ? ` class="gstart"` : "";
       const list = e.by.get(p.key);
@@ -358,6 +363,20 @@ function qgap(s, p){
   if (state.qualified?.has(`${s.pkey}|${s.dist}|${s.stroke}`)) return "";   // qualifying is per event, in either course
   const q = qstd(s, p);
   return q && !q.meets ? ` <span class="gap g-${QUAL[q.champ][0]}" title="${fmt(q.gap)} s to the EFSL ${QUAL[q.champ][1]} standard of ${fmt(q.standard)} (${s.course}, ${qage(q, p)})">−${fmt(q.gap)}</span>` : "";
+}
+// The age each swimmer is judged at, under their name when EFSL quals is on: "13 at champs",
+// or "12 at LD · 13 at SD" across a birthday. Without a birth date, an amber label says
+// the latest age in the results is used (it may be a year too young by the championship).
+const NOBIRTH = "No birth date in the results (newer USS IDs don't contain one), so the latest age in the results is used. By the championship the swimmer may be a year older.";
+// The amber label is a button: tapping it opens the birth date window (openBirth).
+const noBirthChip = (p, text = `age ${p.lastAge ?? "?"}? · no birth date`) =>
+  `<button type="button" class="agechip" data-birth="${esc(p.key)}" title="${esc(NOBIRTH)} Tap to enter the birth date.">${esc(text)}</button>`;
+function champAgeLine(p){
+  if (!ageAtChamp(p)) return noBirthChip(p);
+  const entered = p.birthEntered ? ` <button type="button" class="linkbtn agefix" data-birth="${esc(p.key)}" title="Age from a birth date you entered. Tap to change it.">entered</button>` : "";
+  const ages = window.EFSL.championships.map(c => [QUAL[c.id][0].toUpperCase(), ageAt(p, c, state.champDates)]);
+  const txt = new Set(ages.map(a => a[1])).size === 1 ? `${ages[0][1]} at champs` : ages.map(([k, a]) => `${a} at ${k}`).join(" · ");
+  return `<span class="champage" title="Age on the first day of each championship (${esc(champDatesText())})">${txt}${entered}</span>`;
 }
 function setEfsl(on, rerender = true){
   state.efsl = !!on;
@@ -493,7 +512,8 @@ function nearReport(){
   let h = `<div class="near-rep"><div class="near-kicker">EFSL 2025–2028 championships</div>` +
     `<h2>Close to qualifying: within ${esc(String(pct))}%</h2><p class="near-meta">${esc(who)}</p>` +
     `<p class="near-meta">Each swimmer's best SCM and LCM time per event, against the standard for their age on the championship's first day (${esc(champDatesText())}). ` +
-    `Ages marked * use the swimmer's latest age, as their results have no birth date. Events already qualified in either course aren't listed.</p>`;
+    (people.some(p => !ageAtChamp(p)) ? `Swimmers marked <span class="agechip">no birth date</span> are judged at their latest age in the results, as their results have no birth date. ` : "") +
+    `Events already qualified in either course aren't listed.</p>`;
   if (!people.length) return h + `<p class="empty">Choose swimmers first.</p></div>`;
   for (const c of window.EFSL.championships) {
     const mine = rows.filter(r => r.champ === c.id), cls = QUAL[c.id][0];
@@ -505,7 +525,7 @@ function nearReport(){
     let last = null;
     for (const r of mine) {
       const p = r.person, s = r.swim, first = p.key !== last; last = p.key;
-      h += `<tr class="${first ? "near-first" : ""}"><td>${first ? `<b>${esc(p.first)} ${esc(p.last)}</b> <span class="near-age">${r.age ?? ""}${ageAtChamp(p) ? "" : "*"}${p.sex ? " " + esc(p.sex) : ""}</span>` : ""}</td>` +
+      h += `<tr class="${first ? "near-first" : ""}"><td>${first ? `<b>${esc(p.first)} ${esc(p.last)}</b> <span class="near-age">${r.age ?? ""}${p.sex ? " " + esc(p.sex) : ""}</span>${ageAtChamp(p) ? "" : " " + noBirthChip(p, "no birth date")}` : ""}</td>` +
         `<td>${esc(eventLabel(s.dist, s.stroke))}</td><td>${esc(s.course)}</td><td class="t">${esc(fmt(s.time.cs))}</td>` +
         `<td class="t">${esc(fmt(r.standard))}</td><td class="t"><span class="gap g-${cls}">−${esc(fmt(r.gap))}</span></td>` +
         `<td class="t">${r.gapPct.toFixed(1)}%</td><td class="d">${esc(s.meet.label)}, ${esc(fmtDate(s.date))}</td></tr>`;
@@ -518,10 +538,49 @@ const renderNear = () => { $("nearBody").innerHTML = nearReport(); };
 // Championship dates: defaults from the standards (first day of each), changeable here.
 const champDate = c => state.champDates[c.id] || c.date;
 const champDatesText = () => window.EFSL.championships.map(c => `${QUAL[c.id][1]} ${fmtDate(champDate(c))}`).join(", ");
+/* ------------------------------------------------------------------ birth dates entered by hand */
+// For swimmers whose results have no birth date (newer USS IDs). Only used to work out
+// ages at the championships: kept in saved sessions, never shown, printed or shared.
+let birthKey = null;
+function openBirth(key){
+  const p = state.people.get(key); if (!p) return;
+  birthKey = key;
+  $("bdTitle").textContent = `Birth date: ${p.first} ${p.last}`;
+  $("bdInput").value = state.births[key] || "";
+  $("bdMsg").textContent = ""; $("bdClear").hidden = !state.births[key];
+  $("birthDlg").showModal();
+}
+// Saves after checking it against the ages in the results; returns an error message or "".
+function setBirth(key, value){
+  const p = state.people.get(key); if (!p) return "";
+  if (!value) { delete state.births[key]; }
+  else {
+    const bad = checkBirth(value, teamSwims().filter(s => s.pkey === key));
+    if (bad) return bad.error ? "That isn't a valid date." :
+      `That date makes ${p.first} ${bad.implied} on ${fmtDate(bad.date)}, but the results say ${bad.age}. Check the date.`;
+    state.births[key] = value;
+  }
+  rebuildPeople(); render();
+  if ($("near").open) { renderNear(); renderNearDates(); }
+  return "";
+}
+function birthSummary(need){
+  const missing = need.filter(p => !p.birthEntered).length, entered = need.length - missing, n = k => `${k} swimmer${k === 1 ? "" : "s"}`;
+  return missing ? `${n(missing)} without a birth date${entered ? ` · ${entered} entered` : ""}` : `Birth dates entered for ${n(entered)}`;
+}
 function renderNearDates(){
   $("nearDates").innerHTML = `<span class="k">Championship dates (ages on the first day)</span>` +
     window.EFSL.championships.map(c => `<label>${esc(QUAL[c.id][1])} <input type="date" data-champ="${esc(c.id)}" value="${esc(champDate(c))}"></label>`).join("") +
     (Object.keys(state.champDates).length ? `<button type="button" class="linkbtn" id="datesReset">Reset</button>` : "");
+  // swimmers whose results have no birth date, in a collapsed list (stays open across re-renders once opened)
+  const need = selectedPeople().filter(p => !p.birth || p.birthEntered);
+  const open = $("nearBirths").querySelector("details")?.open;
+  $("nearBirths").innerHTML = !need.length ? "" :
+    `<details${open ? " open" : ""}><summary>${birthSummary(need)}</summary>` +
+    `<p class="small">Enter a birth date to judge them at their age on the championship's first day. It's kept in your saved session only, never shown or shared.</p>` +
+    need.map(p => `<label class="bd-row"><span>${esc(p.first)} ${esc(p.last)} <span class="near-age">latest age ${p.lastAge ?? "?"}</span></span>` +
+      `<input type="date" data-birth-input="${esc(p.key)}" value="${esc(state.births[p.key] || "")}"><span class="bd-err" data-birth-err="${esc(p.key)}"></span></label>`).join("") +
+    `</details>`;
 }
 function setChampDate(id, value){
   const c = window.EFSL.championships.find(c => c.id === id);
@@ -566,7 +625,7 @@ $("helpBtn").onclick = openHelp;
 document.querySelectorAll("[data-help]").forEach(b => b.onclick = openHelp);
 $("printBtn").onclick = () => { document.body.classList.toggle("with-appendix", $("appendixChk").checked); window.print(); };
 $("csvBtn").onclick = downloadCSV;
-$("clearBtn").onclick = () => { state.files = []; state.swims = []; state.sources = []; state.team = null; state.sharedAges = null; state.selected.clear(); state.people.clear(); seenText.clear(); $("msg").textContent = ""; renderFiles(); render(); };
+$("clearBtn").onclick = () => { state.files = []; state.swims = []; state.sources = []; state.team = null; state.sharedAges = null; state.births = {}; state.selected.clear(); state.people.clear(); seenText.clear(); $("msg").textContent = ""; renderFiles(); render(); };
 $("teamOk").onclick = () => closeTeamPicker(document.querySelector("#teamList input:checked")?.value);
 $("teamPick").addEventListener("close", () => closeTeamPicker());   // Esc: show every team
 $("files").addEventListener("click", e => { if (e.target.closest("[data-team-change]")) openTeamPicker(); });
@@ -583,6 +642,16 @@ document.querySelectorAll("#viewbar [data-view]").forEach(b => b.onclick = () =>
 $("efslChk").onchange = e => setEfsl(e.target.checked);
 $("nearBtn").onclick = openNear;
 $("nearPct").oninput = renderNear;
+// birth dates: the amber labels (table and report), the window, and the list in Close to qualifying
+document.addEventListener("click", e => { const b = e.target.closest("[data-birth]"); if (b) { e.preventDefault(); openBirth(b.dataset.birth); } });
+$("bdSave").onclick = () => { const err = setBirth(birthKey, $("bdInput").value); if (err) $("bdMsg").textContent = err; else $("birthDlg").close(); };
+$("bdClear").onclick = () => { setBirth(birthKey, ""); $("birthDlg").close(); };
+$("nearBirths").addEventListener("change", e => {
+  const k = e.target.dataset.birthInput; if (!k) return;
+  const err = setBirth(k, e.target.value);
+  const box = [...$("nearBirths").querySelectorAll("[data-birth-err]")].find(x => x.dataset.birthErr === k);
+  if (box) box.textContent = err;
+});
 $("nearDates").addEventListener("change", e => { if (e.target.dataset.champ) setChampDate(e.target.dataset.champ, e.target.value); });
 $("nearDates").addEventListener("click", e => { if (e.target.id === "datesReset") { state.champDates = {}; render(); renderNear(); renderNearDates(); } });
 $("nearPrintBtn").onclick = printNear;

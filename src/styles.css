@@ -8,6 +8,7 @@
   --bg:#F5F9FA; --surface:#FFFFFF; --ink:#12242E; --muted:#5B6F7A; --line:#D5E2E7;
   --pool:#0B5A7A; --pool-tint:#E3F0F5; --lane:#C23B2E; --lane-tint:#FBEAE7; --hover:#EEF6F9;
   --qld:#1F6FD1; --qsd:#7A4CC2;   /* EFSL quals: Long Distance blue, Short Distance purple, as in EFSL's tables */
+  --warn:#9A5A00;                  /* amber: age assumed, no birth date */
   color-scheme: light;
 }
 /* screen only, so printing from dark mode still gets dark ink on white paper */
@@ -15,7 +16,7 @@
   :root{
     --bg:#0E1A21; --surface:#14242D; --ink:#E4EEF2; --muted:#93A8B3; --line:#27404C;
     --pool:#5DB4D6; --pool-tint:#17323F; --lane:#F07A6B; --lane-tint:#3A1F1C; --hover:#1B313C;
-    --qld:#6AA8F5; --qsd:#B795F0;
+    --qld:#6AA8F5; --qsd:#B795F0; --warn:#F2B35B;
     color-scheme: dark;
   }
 }
@@ -55,6 +56,25 @@ table.grid{border-collapse:separate;border-spacing:0;font-variant-numeric:tabula
 .grid .gstart{border-left:2px solid var(--ink)}
 .grid th.sw{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;border-right:2px solid var(--ink)}
 .grid th.sw .fn{display:block;font:600 1.05rem/1.15 "Barlow Condensed",sans-serif}
+/* EFSL quals: the age each swimmer is judged at, and an amber label when it's assumed */
+.grid th.sw .champage{display:block;font-size:.7rem;color:var(--muted);font-weight:400}
+.agechip{display:inline-block;font:600 .68rem/1.3 Barlow,sans-serif;color:var(--warn);border:1px solid var(--warn);border-radius:4px;padding:0 4px;white-space:nowrap;vertical-align:1px}
+.grid th.sw .agechip{display:block;width:fit-content;margin-top:2px}
+button.agechip{background:none;cursor:pointer}
+button.agechip:hover{background:var(--hover)}
+.agefix{font-size:.68rem;margin-left:4px}
+#birthDlg{width:min(440px,94vw)}
+.bd-body{padding:12px 20px}
+.bd-body label{display:inline-flex;align-items:center;gap:8px}
+.bd-body input,.bd-row input{border:1px solid var(--line);border-radius:6px;padding:4px 6px;background:var(--bg);color:var(--ink)}
+.bd-msg{margin:8px 0 0;color:var(--lane);font-size:.88rem;min-height:1.2em}
+.near-births{padding:0 20px;border-bottom:1px solid var(--line);font-size:.88rem}
+.near-births:empty{display:none}
+.near-births summary{cursor:pointer;padding:8px 0;color:var(--warn);font-weight:600}
+.near-births .small{margin:0 0 6px;color:var(--muted)}
+.bd-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:4px 0;border-top:1px solid var(--line)}
+.bd-row > span:first-child{min-width:12em}
+.bd-err{color:var(--lane);font-size:.8rem}
 .grid th.sw .tm{display:block;font-size:.72rem;color:var(--muted);font-weight:400}
 .grid thead th.sw{z-index:3;vertical-align:bottom;color:var(--muted);font:500 .85rem Barlow,sans-serif;border-bottom:2px solid var(--ink)}
 .grid td{text-align:center;font:600 1.1rem "Barlow Condensed",sans-serif}
@@ -173,7 +193,7 @@ table.near tbody tr:first-child td{border-top:0}
 
 @media print{
   @page{size:landscape;margin:12mm}
-  :root{--qld:#1F6FD1;--qsd:#7A4CC2;--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#bbb;--pool:#0B5A7A;--pool-tint:#E3F0F5;--lane:#B0281B;--lane-tint:#fff;padding:0}
+  :root{--qld:#1F6FD1;--qsd:#7A4CC2;--warn:#8A5000;--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#bbb;--pool:#0B5A7A;--pool-tint:#E3F0F5;--lane:#B0281B;--lane-tint:#fff;padding:0}
   body{background:#fff;font-size:11px}
   header,#drop,#files,#msg,#sharednote,dialog,.noprint{display:none!important}
   body.print-near > :not(#nearPrint){display:none!important}

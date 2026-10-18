@@ -110,8 +110,11 @@ European Forces Swim League 2025–2028 championship standards: solid for Long
 Distance Champs, dashed for Short Distance Champs. Each swimmer is judged at
 their **age on the championship's first day** (Long Distance 27 Nov 2026,
 Short Distance 27 Feb 2027; the dates can be changed in the Close to qualifying
-window), worked out from the birth date in their USS ID; without one, their
-latest age in the results is used. Birth dates are only used to work out ages:
+window), worked out from the birth date in their USS ID, and shown under each
+swimmer's name ("13 at champs", or "12 at LD · 13 at SD" across a birthday).
+Newer USS IDs don't contain a birth date: those swimmers get an amber
+**age 12? · no birth date** label (in the table, the legend count and the
+report) and are judged at their latest age in the results. Birth dates are only used to work out ages:
 they're never shown or exported, and shared files replace the IDs with
 stand-ins and carry each swimmer's age at the championships instead. Times that don't qualify yet
 show how much they still need to drop (e.g. `−0.84`), underlined solid or dashed

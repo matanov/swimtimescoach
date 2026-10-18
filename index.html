@@ -44,7 +44,7 @@
   </div>
   <label class="qualchk"><input type="checkbox" id="efslChk"> EFSL quals</label>
   <button type="button" class="linkbtn" id="nearBtn">Close to qualifying…</button>
-  <span id="qlegend" class="qlegend" hidden><span class="q q-ld">Long Distance</span> <span class="q q-sd">Short Distance</span> qualified · <span class="gap g-ld">−0.84</span> <span class="gap g-sd">−0.84</span> still to drop · EFSL standards at each swimmer's age on the championship's first day</span>
+  <span id="qlegend" class="qlegend" hidden><span class="q q-ld">Long Distance</span> <span class="q q-sd">Short Distance</span> qualified · <span class="gap g-ld">−0.84</span> <span class="gap g-sd">−0.84</span> still to drop · EFSL standards at each swimmer's age on the championship's first day<span id="qmissing"></span></span>
 </div>
 
 <div id="nearPrint"></div>
@@ -77,7 +77,22 @@
     <button class="btn" id="nearCsv">Download CSV</button>
   </div>
   <div class="near-dates" id="nearDates"></div>
+  <div class="near-births" id="nearBirths"></div>
   <div class="dbody" id="nearBody"></div>
+</dialog>
+
+<dialog id="birthDlg" aria-labelledby="bdTitle">
+  <div class="dhead">
+    <div><h2 id="bdTitle">Birth date</h2><p>The results don't include one. It's only used to work out the swimmer's age on each championship's first day, and is never shown, printed or shared.</p></div>
+  </div>
+  <div class="bd-body">
+    <label>Birth date <input type="date" id="bdInput"></label>
+    <p class="bd-msg" id="bdMsg" role="alert"></p>
+  </div>
+  <div class="pk-foot">
+    <button type="button" class="linkbtn" id="bdClear">Remove</button>
+    <span><button class="btn" data-close>Cancel</button> <button class="btn primary" id="bdSave">Save</button></span>
+  </div>
 </dialog>
 
 <dialog id="help" aria-labelledby="helpTitle">
@@ -112,7 +127,7 @@
         <li>Yards and meters times are never compared, so each course keeps its own best. 500/1000/1650 yards free share a column with 400/800/1500 meters.</li>
         <li>DQ, NS, SCR and DNF never count as a best time.</li>
         <li><b>Close to qualifying…</b> (next to EFSL quals) lists each selected swimmer's best times in events they haven't qualified for yet (in either course) that are within a percentage of the standard (5% by default), split into Long Distance and Short Distance Champs, with the time and % still to drop. Print it, save it as PDF or download it as CSV.</li>
-        <li>Tick <b>EFSL quals</b> to check times against the European Forces Swim League 2025–2028 championship standards. A time that qualifies gets a box: solid for Long Distance Champs, dashed for Short Distance Champs. A time that doesn't shows how much it still needs to drop, e.g. <b>−0.84</b>, underlined the same way. Qualifying is per event: a qualifying time in either short course or long course meters counts, and the other course then shows no gap. Each swim is judged at the swimmer's age on the championship's first day (Long Distance 27 Nov 2026, Short Distance 27 Feb 2027; change them in <b>Close to qualifying…</b>), worked out from the birth date in the swimmer's USS ID. Without one, their latest age in the results is used. Equal to the standard counts. Short course and long course meters only.</li>
+        <li>Tick <b>EFSL quals</b> to check times against the European Forces Swim League 2025–2028 championship standards. A time that qualifies gets a box: solid for Long Distance Champs, dashed for Short Distance Champs. A time that doesn't shows how much it still needs to drop, e.g. <b>−0.84</b>, underlined the same way. Qualifying is per event: a qualifying time in either short course or long course meters counts, and the other course then shows no gap. Each swim is judged at the swimmer's age on the championship's first day (Long Distance 27 Nov 2026, Short Distance 27 Feb 2027; change them in <b>Close to qualifying…</b>), worked out from the birth date in the swimmer's USS ID. That age shows under each swimmer's name (e.g. "13 at champs", or "12 at LD · 13 at SD" across a birthday). Newer USS IDs don't contain a birth date: those swimmers get an amber <b>age 12? · no birth date</b> label and are judged at their latest age in the results, which may be a year too young by the championship. Equal to the standard counts. Short course and long course meters only.</li>
         <li>Swimmers are matched across meets by name. If a name is spelled differently in two meets, they show as two people.</li>
       </ul>
     </section>

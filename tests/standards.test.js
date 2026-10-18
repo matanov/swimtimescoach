@@ -171,3 +171,14 @@ test("people get a birth date from their IDs, and shared files can mask the IDs"
   assert.equal([...CL2.assignPeople([m]).values()][0].birth, null);
   assert.equal(masked.split("\r\n").length, text.split("\r\n").length);
 });
+
+test("a birth date entered by hand must fit the ages in the results", () => {
+  const sw = (date, age, start) => ({ date, age, meet: { start: start || date } });
+  const swims = [sw("2025-10-11", 12), sw("2026-03-14", 12)];
+  assert.equal(CL2.checkBirth("2013-03-20", swims), null);                    // 12 on both dates
+  assert.deepEqual(CL2.checkBirth("2013-01-05", swims), { date: "2026-03-14", age: 12, implied: 13 });
+  assert.deepEqual(CL2.checkBirth("2014-03-20", swims), { date: "2025-10-11", age: 12, implied: 11 });
+  assert.deepEqual(CL2.checkBirth("soon", swims), { error: "not a date" });
+  // a birthday on the second day of a meet whose results print the age on its first day
+  assert.equal(CL2.checkBirth("2013-11-09", [sw("2025-11-09", 11, "2025-11-08")]), null);
+});

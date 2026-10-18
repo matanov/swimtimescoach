@@ -1,7 +1,8 @@
 /*
  * Saved sessions: one .zip holding every loaded .cl2/.sd3 text plus
  * session.json (selected swimmers, print option, table view, your team, EFSL quals on/off,
- * championship dates; in shared files, each swimmer's age at the championships). Opening it re-parses the
+ * championship dates, birth dates entered by hand; in shared files, each swimmer's age at
+ * the championships instead, never birth dates). Opening it re-parses the
  * files, so a session always reflects the current parser. Nothing is stored
  * anywhere but the file the user downloads.
  *
@@ -17,7 +18,8 @@ const VERSION = 1;
 // sources: [{name, text}], selected: iterable of person keys
 // champDates: {championship id: "YYYY-MM-DD"} the user set; champAges: {person key: {championship id: age}},
 // written into shared files, whose IDs are masked and so carry no birth dates
-async function saveSession(JSZip, {sources, selected, appendix, view, team, efsl, champDates, champAges}){
+// births: {person key: "YYYY-MM-DD"} entered by hand for swimmers whose results have none
+async function saveSession(JSZip, {sources, selected, appendix, view, team, efsl, champDates, champAges, births}){
   const zip = new JSZip();
   const files = sources.map((s, i) => {
     // index prefix keeps same-named files (e.g. two "results.cl2") apart
@@ -28,12 +30,12 @@ async function saveSession(JSZip, {sources, selected, appendix, view, team, efsl
   zip.file(MANIFEST, JSON.stringify({
     app: APP, version: VERSION, saved: new Date().toISOString(),
     files, selected: [...selected], appendix: !!appendix, view: view || "course", team: team || null, efsl: !!efsl,
-    champDates: champDates || {}, ...(champAges ? {champAges} : {}),
+    champDates: champDates || {}, ...(champAges ? {champAges} : {}), ...(births && Object.keys(births).length ? {births} : {}),
   }, null, 2));
   return zip.generateAsync({type: "uint8array", compression: "DEFLATE"});
 }
 
-// Returns {sources, selected, appendix, view, team, efsl, champDates, champAges}, or null if the zip isn't a saved session.
+// Returns {sources, selected, appendix, view, team, efsl, champDates, champAges, births}, or null if the zip isn't a saved session.
 // view and team are null for sessions saved before they existed (team is also null for one-team data).
 async function readSession(zip){
   const mf = zip.file(MANIFEST);
@@ -53,7 +55,8 @@ async function readSession(zip){
   const isDate = v => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
   const champDates = Object.fromEntries(Object.entries(m.champDates || {}).filter(([, v]) => isDate(v)));
   const champAges = m.champAges && typeof m.champAges === "object" ? m.champAges : null;
-  return {sources, selected: Array.isArray(m.selected) ? m.selected : [], appendix: !!m.appendix, view, team, efsl: !!m.efsl, champDates, champAges};
+  const births = Object.fromEntries(Object.entries(m.births || {}).filter(([, v]) => isDate(v)));
+  return {sources, selected: Array.isArray(m.selected) ? m.selected : [], appendix: !!m.appendix, view, team, efsl: !!m.efsl, champDates, champAges, births};
 }
 
 const api = { saveSession, readSession, MANIFEST };
