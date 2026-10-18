@@ -115,8 +115,10 @@ to the standard counts. Only SCM and LCM (EFSL has no yards standards). The
 boxes print, and shared files keep them, legend included.
 
 **Close to qualifying…** (next to EFSL quals) opens a report of the selected
-swimmers' best SCM and LCM times that haven't met an EFSL standard yet but are
-within a percentage of it, 5% by default and adjustable. It has one section per
+swimmers' best SCM and LCM times in events they haven't qualified for yet, that
+are within a percentage of the standard, 5% by default and adjustable.
+Qualifying is per event: a qualifying time in either SCM or LCM counts, so
+that event is left out of the report and shows no gap in the table. It has one section per
 championship (Long Distance, Short Distance), sorted by swimmer, with the best
 time, the standard, the time and % still to drop, and where the best was swum.
 **Print / Save PDF** prints just the report, each championship starting a new

@@ -17,7 +17,7 @@ if (isDownloadedApp) {
 document.documentElement.classList.remove("nojs");
 document.getElementById("sdetails")?.remove();
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, listTeams,
-        pairedDist, columnLabel, courseBests, trimToSwimmers, standardFor, nearStandards, STROKES, COURSE_ORDER } = window.CL2;
+        pairedDist, columnLabel, courseBests, trimToSwimmers, standardFor, nearStandards, qualifiedEvents, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -274,6 +274,8 @@ function buildGrid(){
 
 function render(){
   const wrap = document.getElementById("wrap");
+  // events qualified in either course ("pkey|dist|stroke"): their other-course times show no gap
+  state.qualified = state.efsl ? qualifiedEvents(window.EFSL, teamSwims(), state.people) : new Set();
   const {people, events} = buildGrid();
   if (!state.swims.length) { wrap.innerHTML = `<div class="empty">No results loaded yet.</div>`; return; }
   if (!people.length) { wrap.innerHTML = `<div class="empty">Choose one or more swimmers to build the table.</div>`; return; }
@@ -336,6 +338,7 @@ function qbox(html, s, p){
   return q && q.meets ? `<span class="q q-${QUAL[q.champ][0]}" title="Meets the EFSL ${QUAL[q.champ][1]} standard of ${fmt(q.standard)} (${s.course}, age ${p.lastAge})">${html}</span>` : html;
 }
 function qgap(s, p){
+  if (state.qualified?.has(`${s.pkey}|${s.dist}|${s.stroke}`)) return "";   // qualifying is per event, in either course
   const q = qstd(s, p);
   return q && !q.meets ? ` <span class="gap g-${QUAL[q.champ][0]}" title="${fmt(q.gap)} s to the EFSL ${QUAL[q.champ][1]} standard of ${fmt(q.standard)} (${s.course}, age ${p.lastAge})">−${fmt(q.gap)}</span>` : "";
 }

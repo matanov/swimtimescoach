@@ -114,6 +114,13 @@ test("close-to-qualifying report lists best times within the chosen % of a stand
     [["long-distance", "Anna", "800 SCM", "13:30.00", 2.55], ["short-distance", "Bea", "100 LCM", "1:21.00", 1.77]]);
   assert.equal(CL2.nearStandards(EFSL, swims, people, 1.5).length, 0);
   assert.equal(CL2.nearStandards(EFSL, swims, people, 20).length, 4);   // adds Anna's 50 Free and Bea's 100 SCM
+  // Anna's 400 Free qualified in SCM, so a near-miss LCM 400 Free (12 F LD LCM 6:32.89) isn't listed
+  const withLcm = [...swims, mk("ANNA", 400, "1", "LCM", "6:40.00", "2025-12-01")];        // 1.8% off on its own
+  assert.ok(!CL2.nearStandards(EFSL, withLcm, people, 5).some(r => r.swim.dist === 400));
+  assert.ok(CL2.qualifiedEvents(EFSL, withLcm, people).has("ANNA|400|1"));
+  // ...but it would be listed if she hadn't qualified in SCM
+  const lcmOnly = withLcm.filter(s => !(s.dist === 400 && s.course === "SCM"));
+  assert.ok(CL2.nearStandards(EFSL, lcmOnly, people, 5).some(r => r.swim.dist === 400 && r.swim.course === "LCM"));
   // exactly at the limit counts: 2.55...% for Anna
   const exact = at5[0].gapPct;
   assert.equal(CL2.nearStandards(EFSL, swims, people, exact).filter(r => r.person.first === "Anna").length, 1);
