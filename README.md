@@ -114,6 +114,14 @@ count once the swimmer is 12 unless it also meets the 12 standard; a time equal
 to the standard counts. Only SCM and LCM (EFSL has no yards standards). The
 boxes print, and shared files keep them, legend included.
 
+**Close to qualifying…** (next to EFSL quals) opens a report of the selected
+swimmers' best SCM and LCM times that haven't met an EFSL standard yet but are
+within a percentage of it, 5% by default and adjustable. It has one section per
+championship (Long Distance, Short Distance), sorted by swimmer, with the best
+time, the standard, the time and % still to drop, and where the best was swum.
+**Print / Save PDF** prints just the report, each championship starting a new
+page; **Download CSV** gives the same rows.
+
 Yards and meters times are never compared, so each course keeps its own best.
 500/1000/1650 yards free share a column with 400/800/1500 meters, and the
 header lists only the distances actually swum ("400 Free" for a meters-only

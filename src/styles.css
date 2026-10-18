@@ -148,6 +148,23 @@ footer p{margin:0}
 .shcell:hover{background:var(--hover);text-decoration:underline}
 @media print{#sdetails{display:none}}
 
+/* close to qualifying report: a dialog on screen, printed on its own (body.print-near) */
+#near{width:min(900px,96vw)}
+.near-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 20px;border-bottom:1px solid var(--line)}
+.near-tools label{display:inline-flex;align-items:center;gap:6px}
+.near-tools input{width:5.5em;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--bg);color:var(--ink)}
+.near-tools .btn:first-of-type{margin-left:auto}
+.near-kicker{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+.near-rep h2{margin:2px 0 4px;font:700 1.5rem/1.15 "Barlow Condensed",sans-serif}
+.near-meta{margin:2px 0;color:var(--muted);font-size:.85rem}
+.near-champ{margin:16px 0 6px;font:600 1.05rem "Barlow Condensed",sans-serif;color:var(--muted)}
+.near-champ .q{color:var(--ink);font:700 1.05rem "Barlow Condensed",sans-serif;margin-right:6px}
+table.near td{padding:4px 8px}
+table.near tr.near-first td{border-top:1px solid var(--ink)}
+table.near tbody tr:first-child td{border-top:0}
+.near-age{color:var(--muted);font-size:.8rem}
+#nearPrint{display:none}
+
 #printhead,#appendix{display:none}
 
 @media print{
@@ -155,6 +172,15 @@ footer p{margin:0}
   :root{--qld:#1F6FD1;--qsd:#7A4CC2;--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#bbb;--pool:#0B5A7A;--pool-tint:#E3F0F5;--lane:#B0281B;--lane-tint:#fff;padding:0}
   body{background:#fff;font-size:11px}
   header,#drop,#files,#msg,#sharednote,dialog,.noprint{display:none!important}
+  body.print-near > :not(#nearPrint){display:none!important}
+  body.print-near #nearPrint{display:block}
+  #nearPrint .near-rep h2{font-size:1.5rem}
+  #nearPrint table.near tr{break-inside:avoid}
+  #nearPrint table.near td,#nearPrint table.near th{padding:2px 6px;font-size:10.5px}
+  #nearPrint table.near td.t{font:600 12px "Barlow Condensed",sans-serif}
+  #nearPrint .near-meta{font-size:10px}
+  #nearPrint .near-champ{break-after:avoid}
+  #nearPrint .near-champ.near-sd{break-before:page}   /* each championship starts a page */
   #printhead{display:block;margin:0 0 8px}
   #printhead h1{font-size:1.6rem}
   #printhead p{margin:2px 0;color:#444}

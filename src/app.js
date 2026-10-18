@@ -17,7 +17,7 @@ if (isDownloadedApp) {
 document.documentElement.classList.remove("nojs");
 document.getElementById("sdetails")?.remove();
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, listTeams,
-        pairedDist, columnLabel, courseBests, trimToSwimmers, standardFor, STROKES, COURSE_ORDER } = window.CL2;
+        pairedDist, columnLabel, courseBests, trimToSwimmers, standardFor, nearStandards, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -454,6 +454,64 @@ function downloadCSV(){
   download(new Blob([lines.join("\r\n")], {type:"text/csv"}), "best-times.csv");
 }
 
+/* ------------------------------------------------------------------ close to qualifying */
+// Selected swimmers' best SCM/LCM times within N % of an EFSL standard they haven't
+// met yet (nearStandards in cl2.js), one section per championship. Prints on its own.
+const nearPct = () => { const v = parseFloat($("nearPct").value); return v > 0 ? Math.min(v, 50) : 5; };
+const nearRows = () => {
+  const people = new Map(selectedPeople().map(p => [p.key, p]));
+  return nearStandards(window.EFSL, teamSwims(), people, nearPct());
+};
+function nearReport(){
+  const rows = nearRows(), pct = nearPct(), people = selectedPeople(), meets = teamMeets();
+  const dates = meets.map(m => m.start).filter(Boolean).sort();
+  const span = dates.length ? fmtDate(dates[0]) + (dates.at(-1) !== dates[0] ? " – " + fmtDate(dates.at(-1)) : "") : "";
+  const who = [state.team ? teamName(state.team) : [...new Set(people.flatMap(p => [...p.teams]))].join(", "),
+    `${meets.length} meet${meets.length === 1 ? "" : "s"}${span ? ", " + span : ""}`,
+    `${people.length} swimmer${people.length === 1 ? "" : "s"}`,
+    `generated ${new Date().toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"})}`].filter(Boolean).join(" · ");
+  let h = `<div class="near-rep"><div class="near-kicker">EFSL 2025–2028 championships</div>` +
+    `<h2>Close to qualifying: within ${esc(String(pct))}%</h2><p class="near-meta">${esc(who)}</p>` +
+    `<p class="near-meta">Each swimmer's best SCM and LCM time per event, against the standard for their latest age. Times that already qualify aren't listed.</p>`;
+  if (!people.length) return h + `<p class="empty">Choose swimmers first.</p></div>`;
+  for (const c of window.EFSL.championships) {
+    const mine = rows.filter(r => r.champ === c.id), cls = QUAL[c.id][0];
+    const n = new Set(mine.map(r => r.person.key)).size;
+    h += `<h3 class="near-champ near-${cls}"><span class="q q-${cls}">${esc(QUAL[c.id][1])} Champs</span> ` +
+      `${mine.length ? `${mine.length} time${mine.length === 1 ? "" : "s"}, ${n} swimmer${n === 1 ? "" : "s"}` : "none within " + esc(String(pct)) + "%"}</h3>`;
+    if (!mine.length) continue;
+    h += `<table class="hist near"><thead><tr><th>Swimmer</th><th>Event</th><th>Course</th><th>Best</th><th>Standard</th><th>To drop</th><th>%</th><th>Swum at</th></tr></thead><tbody>`;
+    let last = null;
+    for (const r of mine) {
+      const p = r.person, s = r.swim, first = p.key !== last; last = p.key;
+      h += `<tr class="${first ? "near-first" : ""}"><td>${first ? `<b>${esc(p.first)} ${esc(p.last)}</b> <span class="near-age">${p.lastAge ?? ""}${p.sex ? " " + esc(p.sex) : ""}</span>` : ""}</td>` +
+        `<td>${esc(eventLabel(s.dist, s.stroke))}</td><td>${esc(s.course)}</td><td class="t">${esc(fmt(s.time.cs))}</td>` +
+        `<td class="t">${esc(fmt(r.standard))}</td><td class="t"><span class="gap g-${cls}">−${esc(fmt(r.gap))}</span></td>` +
+        `<td class="t">${r.gapPct.toFixed(1)}%</td><td class="d">${esc(s.meet.label)}, ${esc(fmtDate(s.date))}</td></tr>`;
+    }
+    h += `</tbody></table>`;
+  }
+  return h + `</div>`;
+}
+const renderNear = () => { $("nearBody").innerHTML = nearReport(); };
+function openNear(){ renderNear(); $("near").showModal(); }
+function printNear(){
+  $("nearPrint").innerHTML = nearReport();
+  document.body.classList.add("print-near");
+  $("near").close();
+  window.print();
+  document.body.classList.remove("print-near");
+  $("nearPrint").innerHTML = "";
+}
+function nearCSV(){
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [["Championship","Swimmer","Age (latest)","Sex","Event","Course","Best","Standard","To drop (s)","To drop (%)","Meet","Date"].map(q).join(",")];
+  for (const r of nearRows()) lines.push([QUAL[r.champ][1], `${r.person.first} ${r.person.last}`, r.person.lastAge, r.person.sex,
+    eventLabel(r.swim.dist, r.swim.stroke), r.swim.course, fmt(r.swim.time.cs), fmt(r.standard), fmt(r.gap), r.gapPct.toFixed(1),
+    r.swim.meet.label, r.swim.date].map(q).join(","));
+  download(new Blob([lines.join("\r\n")], {type:"text/csv"}), `close-to-qualifying-${nearPct()}pct.csv`);
+}
+
 function download(blob, filename){
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
@@ -488,6 +546,10 @@ document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e =
 $("wrap").addEventListener("click", e => { const b = e.target.closest("button[data-ev]"); if (b) openDetail(b.dataset.ev, b.dataset.p); });
 document.querySelectorAll("#viewbar [data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
 $("efslChk").onchange = e => setEfsl(e.target.checked);
+$("nearBtn").onclick = openNear;
+$("nearPct").oninput = renderNear;
+$("nearPrintBtn").onclick = printNear;
+$("nearCsv").onclick = nearCSV;
 $("appendixChk").onchange = e => document.body.classList.toggle("with-appendix", e.target.checked);
 
 const drop = $("drop");

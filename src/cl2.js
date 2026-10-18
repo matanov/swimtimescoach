@@ -223,6 +223,32 @@ function qualifyingChamp(standards, s, age, sex){
   return q && q.meets ? q.champ : null;
 }
 
+// "Close to qualifying" report: for each person, event and course (SCM/LCM), their
+// best time when it hasn't met its standard but is within pct % of it, judged at the
+// person's latest age. gapPct = time still to drop / standard * 100. people: key ->
+// person (assignPeople); only their swims count. Sorted by championship (as listed in
+// standards), then last and first name, stroke, distance, course.
+function nearStandards(standards, swims, people, pct){
+  const best = new Map();
+  for (const s of swims) {
+    if (!people.has(s.pkey) || s.time.cs == null) continue;
+    const k = `${s.pkey}|${s.course}|${s.dist}|${s.stroke}`, b = best.get(k);
+    if (!b || s.time.cs < b.time.cs) best.set(k, s);
+  }
+  const champOrder = new Map((standards?.championships || []).map((c, i) => [c.id, i]));
+  const rows = [];
+  for (const s of best.values()) {
+    const person = people.get(s.pkey), q = standardFor(standards, s, person.lastAge, person.sex);
+    if (!q || q.meets) continue;
+    const gapPct = q.gap / q.standard * 100;
+    if (gapPct <= pct + 1e-9) rows.push({person, swim: s, ...q, gapPct});
+  }
+  const cmp = (a, b) => a.localeCompare(b, undefined, {sensitivity: "base"});
+  return rows.sort((a, b) => champOrder.get(a.champ) - champOrder.get(b.champ) ||
+    cmp(a.person.last, b.person.last) || cmp(a.person.first, b.person.first) ||
+    a.swim.stroke - b.swim.stroke || a.swim.dist - b.swim.dist || (COURSE_ORDER[a.swim.course] - COURSE_ORDER[b.swim.course]));
+}
+
 /* ------------------------------------------------------------------ sharing
    A shared file carries only the chosen swimmers: their D0/D3 records, plus
    the meet (B1) record and the team (C1) records of teams they swim for.
@@ -252,7 +278,7 @@ function trimToSwimmers(text, keys, team = null){
 
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor,
+              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor, nearStandards,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

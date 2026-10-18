@@ -92,3 +92,29 @@ test("a swim that hasn't qualified reports how much it still needs to drop", () 
   // latest age: 6:30.00 met the 11 400 Free standard but is 7.31 s off the 12 one
   assert.deepEqual([sf(400, "1", "SCM", "6:30.00", 11, "F").meets, sf(400, "1", "SCM", "6:30.00", 12, "F").gap], [true, 731]);
 });
+
+test("close-to-qualifying report lists best times within the chosen % of a standard", () => {
+  // two people, synthetic swims; 12 F 800 Free SCM LD standard 13:09.89 (78989 cs)
+  const mk = (pkey, dist, stroke, course, time, date) => ({ pkey, dist, stroke, course, date, time: CL2.parseTime(time, "") });
+  const people = new Map([
+    ["ANNA", { key: "ANNA", last: "Zeta", first: "Anna", lastAge: 12, sex: "F" }],
+    ["BEA", { key: "BEA", last: "Alpha", first: "Bea", lastAge: 13, sex: "F" }],
+  ]);
+  const swims = [
+    mk("ANNA", 800, "1", "SCM", "13:40.00", "2025-10-01"),   // 3.81% off LD 800 Free
+    mk("ANNA", 800, "1", "SCM", "13:30.00", "2025-11-01"),   // her best: 2.55% off
+    mk("ANNA", 400, "1", "SCM", "6:20.00", "2025-11-01"),    // meets the 12 F LD 400 Free (6:22.69): not listed
+    mk("ANNA", 50, "1", "SCM", "40.00", "2025-11-01"),       // SD 50 Free 36.29: 10.2% off
+    mk("BEA", 100, "1", "LCM", "1:21.00", "2025-12-01"),     // 13 F SD 100 Free LCM 1:19.59: 1.77% off
+    mk("BEA", 100, "1", "SCM", "1:30.00", "2025-12-01"),     // SCM 1:16.69: 17.4% off
+    mk("NOBODY", 100, "1", "LCM", "1:00.00", "2025-12-01"),  // not a selected person
+  ];
+  const at5 = CL2.nearStandards(EFSL, swims, people, 5);
+  assert.deepEqual(at5.map(r => [r.champ, r.person.first, `${r.swim.dist} ${r.swim.course}`, CL2.fmt(r.swim.time.cs), +r.gapPct.toFixed(2)]),
+    [["long-distance", "Anna", "800 SCM", "13:30.00", 2.55], ["short-distance", "Bea", "100 LCM", "1:21.00", 1.77]]);
+  assert.equal(CL2.nearStandards(EFSL, swims, people, 1.5).length, 0);
+  assert.equal(CL2.nearStandards(EFSL, swims, people, 20).length, 4);   // adds Anna's 50 Free and Bea's 100 SCM
+  // exactly at the limit counts: 2.55...% for Anna
+  const exact = at5[0].gapPct;
+  assert.equal(CL2.nearStandards(EFSL, swims, people, exact).filter(r => r.person.first === "Anna").length, 1);
+});
