@@ -194,20 +194,33 @@ function courseBests(list){
 
 /* ------------------------------------------------------------------ qualifying standards
    standards: championship qualifying times, shaped like standards/efsl-2025-2028.json.
-   Returns the id of the championship whose standard the swim meets at the given
-   age and sex, or null. The caller passes the swimmer's latest age: a swim that met
-   the 11-year-old standard doesn't count once the swimmer is 12, unless it also
-   meets the 12 standard. Equal to the standard counts. Only SCM and LCM. */
-function qualifyingChamp(standards, s, age, sex){
+   The caller passes the swimmer's latest age: a swim that met the 11-year-old
+   standard doesn't count once the swimmer is 12, unless it also meets the 12
+   standard. Equal to the standard counts. Only SCM and LCM.
+
+   standardFor returns the standard that applies to the swim, or null when there's
+   none for that event, course, age group and sex:
+     {champ, standard: cs, gap: cs (0 when met), meets, ageGroup}
+   Each event belongs to one championship per age group; if there were ever two,
+   the one met (else the nearest) is returned. */
+function standardFor(standards, s, age, sex){
   if (!standards || s.time.cs == null || age == null || (s.course !== "SCM" && s.course !== "LCM")) return null;
   const g = standards.ageGroups.find(g => (g.minAge == null || age >= g.minAge) && age <= g.maxAge);
   if (!g) return null;
   const ev = `${s.dist} ${STROKES[s.stroke]}`;
+  let best = null;
   for (const c of standards.championships) {
     const t = c.standards[s.course]?.[ev]?.[g.id]?.[sex];
-    if (t && s.time.cs <= parseTime(t, "").cs) return c.id;
+    if (!t) continue;
+    const std = parseTime(t, "").cs, gap = Math.max(0, s.time.cs - std);
+    if (!best || gap < best.gap) best = {champ: c.id, standard: std, gap, meets: gap === 0, ageGroup: g.id};
   }
-  return null;
+  return best;
+}
+// The championship whose standard the swim meets, or null.
+function qualifyingChamp(standards, s, age, sex){
+  const q = standardFor(standards, s, age, sex);
+  return q && q.meets ? q.champ : null;
 }
 
 /* ------------------------------------------------------------------ sharing
@@ -239,7 +252,7 @@ function trimToSwimmers(text, keys, team = null){
 
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp,
+              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.CL2 = api;

@@ -71,6 +71,10 @@ table.grid{border-collapse:separate;border-spacing:0;font-variant-numeric:tabula
 /* EFSL quals: solid box = Long Distance, dashed = Short Distance (also readable in black and white) */
 .q{border:2px solid var(--qld);border-radius:5px;padding:0 4px}
 .q-sd{border-color:var(--qsd);border-style:dashed}
+/* time still to drop to an EFSL standard: same colours, underlined solid (LD) or dashed (SD) */
+.gap{font:600 .72rem Barlow,sans-serif;color:var(--qld);border-bottom:1.5px solid var(--qld);white-space:nowrap;margin-left:2px}
+.g-sd{color:var(--qsd);border-bottom:1.5px dashed var(--qsd)}
+.grid td .ct .gap{margin-left:4px}
 .grid td .ct .q{display:inline-block;margin:2px 0;line-height:1.1}   /* stacked SC/LC boxes don't touch */
 .qlegend .q{font:500 .78rem Barlow,sans-serif;padding:0 5px;margin-right:4px}
 .qlegend[hidden]{display:none}

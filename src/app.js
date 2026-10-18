@@ -17,7 +17,7 @@ if (isDownloadedApp) {
 document.documentElement.classList.remove("nojs");
 document.getElementById("sdetails")?.remove();
 const { parseCL2, fmt, norm, bestOf, bySwimOrder, assignPeople, labelMeets, listTeams,
-        pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, STROKES, COURSE_ORDER } = window.CL2;
+        pairedDist, columnLabel, courseBests, trimToSwimmers, standardFor, STROKES, COURSE_ORDER } = window.CL2;
 const { saveSession, readSession } = window.Session;
 
 /* ------------------------------------------------------------------ state */
@@ -303,7 +303,7 @@ function render(){
       const list = e.by.get(p.key);
       if (!list) { h += `<td${cls}></td>`; return; }
       const b = bestOf(list);
-      const times = byEvent ? stackedTimes(list, p) : b ? qbox(esc(fmt(b.time.cs)), b, p) : esc(noTime(list));
+      const times = byEvent ? stackedTimes(list, p) : b ? qbox(esc(fmt(b.time.cs)), b, p) + qgap(b, p) : esc(noTime(list));
       h += `<td${cls}><button data-ev="${esc(ek)}" data-p="${esc(p.key)}" aria-label="All ${esc(eventTitle(e))} swims for ${esc(p.first)} ${esc(p.last)}">${times}${list.length > 1 ? `<span class="n">${list.length} swims</span>` : ""}</button></td>`;
     });
     h += `</tr>`;
@@ -321,17 +321,23 @@ function render(){
 function stackedTimes(list, p){
   const {short, long} = courseBests(list);
   const line = (entries, missing) => entries.length
-    ? entries.map(x => `<span class="ct">${x.best ? qbox(esc(fmt(x.best.time.cs)), x.best, p) : esc(noTime(x.swims))}<i>${x.letter}</i></span>`).join("")
+    ? entries.map(x => `<span class="ct">${x.best ? qbox(esc(fmt(x.best.time.cs)), x.best, p) : esc(noTime(x.swims))}<i>${x.letter}</i>${x.best ? qgap(x.best, p) : ""}</span>`).join("")
     : `<span class="ct miss">${missing}</span>`;
   return line(short, "—SC") + line(long, "—LC");
 }
 
-// EFSL quals: a time that meets a championship standard, at the swimmer's latest age,
-// gets a box: solid for Long Distance, dashed for Short Distance (styles.css .q).
-const QUAL = {"long-distance": ["q-ld", "Long Distance"], "short-distance": ["q-sd", "Short Distance"]};
+// EFSL quals, judged at the swimmer's latest age. A time that meets a championship
+// standard gets a box (qbox); one that doesn't gets the time still to drop (qgap),
+// e.g. "−0.84", underlined the same way: solid = Long Distance, dashed = Short Distance.
+const QUAL = {"long-distance": ["ld", "Long Distance"], "short-distance": ["sd", "Short Distance"]};
+const qstd = (s, p) => state.efsl && p ? standardFor(window.EFSL, s, p.lastAge, p.sex) : null;
 function qbox(html, s, p){
-  const c = state.efsl && p ? qualifyingChamp(window.EFSL, s, p.lastAge, p.sex) : null;
-  return c ? `<span class="q ${QUAL[c][0]}" title="Meets the EFSL ${QUAL[c][1]} standard for age ${p.lastAge}">${html}</span>` : html;
+  const q = qstd(s, p);
+  return q && q.meets ? `<span class="q q-${QUAL[q.champ][0]}" title="Meets the EFSL ${QUAL[q.champ][1]} standard of ${fmt(q.standard)} (${s.course}, age ${p.lastAge})">${html}</span>` : html;
+}
+function qgap(s, p){
+  const q = qstd(s, p);
+  return q && !q.meets ? ` <span class="gap g-${QUAL[q.champ][0]}" title="${fmt(q.gap)} s to the EFSL ${QUAL[q.champ][1]} standard of ${fmt(q.standard)} (${s.course}, age ${p.lastAge})">−${fmt(q.gap)}</span>` : "";
 }
 function setEfsl(on, rerender = true){
   state.efsl = !!on;
@@ -357,7 +363,7 @@ function historyTable(list, p){
   for (const s of sorted) {
     const best = bests.get(s.course);
     const isBest = s === best;
-    const t = s.time.cs != null ? qbox(esc(fmt(s.time.cs)), s, p) : esc(s.time.dq ? "DQ" : (s.time.code || s.time.raw));
+    const t = s.time.cs != null ? qbox(esc(fmt(s.time.cs)), s, p) + qgap(s, p) : esc(s.time.dq ? "DQ" : (s.time.code || s.time.raw));
     const diff = (!isBest && best && s.time.cs != null) ? ` <span style="color:var(--muted);font:400 .8rem Barlow">+${fmt(s.time.cs - best.time.cs)}</span>` : "";
     h += `<tr class="${isBest ? "best" : ""}"><td class="d">${esc(fmtDate(s.date))}</td><td>${esc(s.meet.label)}</td><td>${esc(s.round)}</td>${showCourse ? `<td>${showDist ? s.dist + " " : ""}${esc(s.course)}</td>` : ""}<td class="t">${t}${isBest ? `<span class="badge">Best</span>` : ""}${diff}</td><td>${s.place ?? ""}</td><td>${s.age ?? ""}</td></tr>`;
   }
@@ -380,7 +386,7 @@ function renderPrintHead(){
     : state.team ? `Best times: ${teamName(state.team)}` : "Best times";
   const meets = teamMeets().slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
   document.getElementById("phMeets").textContent = `From ${meets.length} meet${meets.length>1?"s":""}: ` + meets.map(m => `${m.datedLabel}${m.start ? " (" + fmtDate(m.start) + ")" : ""}`).join("; ");
-  document.getElementById("phQual").textContent = state.efsl ? "Boxed times meet EFSL 2025–2028 championship standards at each swimmer's latest age: solid = Long Distance, dashed = Short Distance." : "";
+  document.getElementById("phQual").textContent = state.efsl ? "EFSL 2025–2028 championship standards at each swimmer's latest age. Boxed times qualify; other times show the time still to drop (e.g. −0.84). Solid = Long Distance, dashed = Short Distance." : "";
   document.getElementById("phDate").textContent = `Generated ${new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"})}`;
 }
 

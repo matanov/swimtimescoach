@@ -76,3 +76,19 @@ test("swims are judged at the swimmer's latest age", () => {
   assert.equal(CL2.qualifyingChamp(EFSL, s, 11, "F"), "long-distance");
   assert.equal(CL2.qualifyingChamp(EFSL, s, 12, "F"), null);
 });
+
+test("a swim that hasn't qualified reports how much it still needs to drop", () => {
+  const sf = (dist, stroke, course, time, age, sex) => CL2.standardFor(EFSL, swim(dist, stroke, course, time), age, sex);
+  // 12 F 800 Free SCM standard (Long Distance) is 13:09.89
+  assert.deepEqual(sf(800, "1", "SCM", "13:12.00", 12, "F"),
+    { champ: "long-distance", standard: CL2.parseTime("13:09.89", "").cs, gap: 211, meets: false, ageGroup: "12" });
+  assert.equal(sf(800, "1", "SCM", "13:09.89", 12, "F").gap, 0);                     // equal: met, no gap
+  assert.equal(sf(800, "1", "SCM", "13:00.00", 12, "F").meets, true);
+  // 13 M 100 Back LCM standard (Short Distance) is 1:29.59: the gap is per course
+  const lc = sf(100, "2", "LCM", "1:31.00", 13, "M"), sc = sf(100, "2", "SCM", "1:31.00", 13, "M");
+  assert.deepEqual([lc.champ, lc.gap, sc.champ, sc.gap], ["short-distance", 141, "short-distance", 731]);
+  assert.equal(sf(100, "5", "LCM", "1:20.00", 12, "M"), null);                       // no 100 IM standard in LCM
+  assert.equal(sf(50, "1", "SCY", "30.00", 12, "M"), null);
+  // latest age: 6:30.00 met the 11 400 Free standard but is 7.31 s off the 12 one
+  assert.deepEqual([sf(400, "1", "SCM", "6:30.00", 11, "F").meets, sf(400, "1", "SCM", "6:30.00", 12, "F").gap], [true, 731]);
+});
