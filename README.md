@@ -94,11 +94,13 @@ Two views, switched with **Columns** above the table:
 
 **By course**: each course in its own block of columns.
 
-[![Best-times table, By course view: short course meters and long course meters columns for six swimmers](docs/images/view-by-course.png)](https://swimtimescoach.com/demo.html)
+[![Best-times table, By course view: short course meters and long course meters columns for eight swimmers](docs/images/view-by-course.png)](https://swimtimescoach.com/demo.html)
 
-**By event (SC + LC)**: short course over long course in one column per event.
+**By event (SC + LC)**: short course over long course in one column per event,
+shown here with **EFSL quals** on (boxes = qualified, underlined numbers = time
+still to drop).
 
-[![Best-times table, By event view: each cell stacks the short course meters time over the long course meters time](docs/images/view-by-event.png)](https://swimtimescoach.com/demo.html)
+[![Best-times table, By event view with EFSL quals on: each cell stacks the short course meters time over the long course meters time; qualifying times are boxed, others show the time still to drop](docs/images/view-by-event.png)](https://swimtimescoach.com/demo.html)
 
 *Click either screenshot to open the [live demo](https://swimtimescoach.com/demo.html) and try it. Both use the
 made-up sample team in [`docs/sample-data/`](docs/sample-data).*
@@ -123,6 +125,8 @@ championship (Long Distance, Short Distance), sorted by swimmer, with the best
 time, the standard, the time and % still to drop, and where the best was swum.
 **Print / Save PDF** prints just the report, each championship starting a new
 page; **Download CSV** gives the same rows.
+
+[![Close to qualifying report within 5%: Long Distance Champs section listing swimmers, events, course, best time, standard, time and % still to drop, and where the best was swum](docs/images/close-to-qualifying.png)](https://swimtimescoach.com/demo.html)
 
 Yards and meters times are never compared, so each course keeps its own best.
 500/1000/1650 yards free share a column with 400/800/1500 meters, and the
@@ -235,7 +239,7 @@ other sites, and don't store result data in the browser.
 | `tools/anonymize.js` | Turns real `.cl2` files into anonymized local test fixtures |
 | `standards/efsl-2025-2028.json` | EFSL championship qualification times 2025–2028 (Long and Short Distance Champs, SCM and LCM), for an upcoming "qualifying times" feature |
 | `tools/make_efsl_standards.py` | Builds that file from the times as printed in EFSL's PDF, checking each row against the table layout |
-| `tools/make_sample_data.py` | Generates the made-up sample meets in `docs/sample-data/` (README screenshots, try-it files) |
+| `tools/make_sample_data.py` | Generates the made-up sample meets in `docs/sample-data/` (demo, README screenshots, try-it files): times built from the EFSL standards so the team shows qualifiers, near misses and far-off times |
 | `docs/images/` | README screenshots |
 | `tools/build-share.js` | Builds the one-file app: the **Share as file** template and the downloadable `swimtimescoach.html` |
 | `docs/sdif-v3-notes.md` | Record layouts the parser relies on |

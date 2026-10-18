@@ -57,6 +57,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 
 ## Docs
 - README screenshots (`docs/images/`) show only the synthetic team from `python3 tools/make_sample_data.py` (`docs/sample-data/`), never real or anonymized-real data: anonymized files keep real times, which can be matched to public results.
+- The sample team's times are built from the EFSL standards (per-swimmer factor, seed 7) so the demo shows qualifiers, near misses, far-off times, a mid-season age-up and events qualified in one course only. If the standards or the generator change, rerun it, check the mix, rebuild (`npm run build-share`) and retake the screenshots. The demo opens with EFSL quals on.
 - The in-app help (`#help` dialog in `index.html`) and the README user guide say the same things; update both when behavior changes.
 
 ## Testing changes

@@ -80,7 +80,7 @@ function buildTemplate(){
 }
 
 // The template filled in like a shared file, with every sample swimmer in the
-// combined view. The static fallback is left empty: a demo visitor's browser runs scripts.
+// combined view and EFSL quals on. The static fallback is left empty: a demo visitor's browser runs scripts.
 async function buildDemo(template = buildTemplate()){
   const JSZip = require("../vendor/jszip.min.js");
   const CL2 = require("../src/cl2.js");
@@ -89,9 +89,10 @@ async function buildDemo(template = buildTemplate()){
   const sources = fs.readdirSync(dir).filter(n => /\.cl2$/i.test(n)).sort()
     .map(name => ({ name, text: fs.readFileSync(path.join(dir, name), "latin1") }));
   const people = CL2.assignPeople(sources.flatMap(s => CL2.parseCL2(s.text, s.name).swims));
-  const bytes = await saveSession(JSZip, { sources, selected: [...people.keys()], appendix: false, view: "event" });
+  const bytes = await saveSession(JSZip, { sources, selected: [...people.keys()], appendix: false, view: "event", efsl: true });
   let html = replaceOnce(template, /<div id="sharednote">[\s\S]*?<\/div>/,
-    '<div id="sharednote"><b>Demo</b> with a made-up team and times. Tap any time to see every swim, or switch the view. ' +
+    '<div id="sharednote"><b>Demo</b> with a made-up team and times. EFSL quals is on: a box marks a qualifying time, an underlined number ' +
+    'the time still to drop. Tap any time to see every swim, switch the view, or try <b>Close to qualifying…</b>. ' +
     'To use your own results, go to <a class="linkbtn" href="https://swimtimescoach.com">swimtimescoach.com</a>.</div>');
   html = replaceOnce(html, /<title>[^<]*<\/title>/, "<title>Best Times demo</title>");
   return html.replace(/<!--SHARE:(\w+)-->/g, (_, k) => k === "data" ? Buffer.from(bytes).toString("base64") : "");

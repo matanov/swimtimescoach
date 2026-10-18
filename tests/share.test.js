@@ -69,7 +69,7 @@ test("downloadable app and shared files carry no links back to the website", () 
   assert.match(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"), /href="swimtimescoach\.html" download/);
 });
 
-test("demo page carries the whole sample team, opens in the combined view, and keeps the strict CSP", async () => {
+test("demo page carries the whole sample team, opens in the combined view with EFSL quals on, and keeps the strict CSP", async () => {
   const html = await buildDemo();
   assert.doesNotMatch(html, /<!--SHARE:/);
   assert.match(html, /<b>Demo<\/b> with a made-up team/);
@@ -77,7 +77,8 @@ test("demo page carries the whole sample team, opens in the combined view, and k
   const b64 = html.match(/id="sharedSession">([A-Za-z0-9+\/=]+)</)[1];
   const s = await readSession(await JSZip.loadAsync(Buffer.from(b64, "base64")));
   assert.equal(s.sources.length, 5);
-  assert.equal(s.selected.length, 6);
+  assert.equal(s.selected.length, 8);
   assert.equal(s.view, "event");
+  assert.equal(s.efsl, true);
   assert.ok(s.sources.every(x => x.text.includes("Chicken Cats")));
 });
