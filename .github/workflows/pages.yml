@@ -1,6 +1,7 @@
 # Every push to main: run the tests, then publish the app to GitHub Pages.
-# Only the files the app needs are published (index.html, converter.html, src/, vendor/),
-# plus the generated src/share-template.js used by "Share as file".
+# Only the files the site needs are published: index.html, converter.html, src/, vendor/,
+# plus what tools/build-share.js generates: src/share-template.js ("Share as file"),
+# swimtimescoach.html (downloadable app) and demo.html (live demo).
 name: Test and deploy
 
 on:
