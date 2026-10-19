@@ -33,7 +33,9 @@ const state = { files: [], swims: [], sources: [], selected: new Set(), people: 
                 champDates: {}, sharedAges: null, births: {} };   // births: entered by hand, {person key: "YYYY-MM-DD"}
 const seenText = new Set();
 
-const teamSwims = () => state.team ? state.swims.filter(s => s.team === state.team) : state.swims;
+// Everything shown comes from here: only your team's swims, and only swims with a valid time.
+// SCR, NS, DQ, DNF and NT results didn't count, so they aren't shown, counted, shared or exported.
+const teamSwims = () => state.swims.filter(s => s.time.cs != null && (!state.team || s.team === state.team));
 function teamMeets(){
   const used = new Set(teamSwims().map(s => s.meet));
   return state.files.filter(m => used.has(m));
@@ -236,7 +238,6 @@ async function shareFile(){
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const eventLabel = (dist, stroke) => `${dist} ${STROKES[stroke]}`;
 const eventTitle = e => e.course ? `${e.label} ${e.course}` : e.label;
-const noTime = list => list[0].time.dq ? "DQ" : (list[0].time.code || "—");
 const fmtDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString(undefined, {year:"numeric", month:"short", day:"numeric"}) : "";
 
 // Collapsed to one line ("18 meets · Sep 6, 2025 – Feb 28, 2026") to save room on phones.
@@ -327,7 +328,7 @@ function render(){
       const list = e.by.get(p.key);
       if (!list) { h += `<td${cls}></td>`; return; }
       const b = bestOf(list);
-      const times = byEvent ? stackedTimes(list, p) : b ? qbox(esc(fmt(b.time.cs)), b, p) + qgap(b, p) : esc(noTime(list));
+      const times = byEvent ? stackedTimes(list, p) : qbox(esc(fmt(b.time.cs)), b, p) + qgap(b, p);
       h += `<td${cls}><button data-ev="${esc(ek)}" data-p="${esc(p.key)}" aria-label="All ${esc(eventTitle(e))} swims for ${esc(p.first)} ${esc(p.last)}">${times}${list.length > 1 ? `<span class="n">${list.length} swims</span>` : ""}</button></td>`;
     });
     h += `</tr>`;
@@ -351,7 +352,7 @@ function printAppendix(){
 function stackedTimes(list, p){
   const {short, long} = courseBests(list);
   const line = (entries, missing) => entries.length
-    ? entries.map(x => `<span class="ct">${x.best ? qbox(esc(fmt(x.best.time.cs)), x.best, p) : esc(noTime(x.swims))}<i>${x.letter}</i>${x.best ? qgap(x.best, p) : ""}</span>`).join("")
+    ? entries.map(x => `<span class="ct">${qbox(esc(fmt(x.best.time.cs)), x.best, p)}<i>${x.letter}</i>${qgap(x.best, p)}</span>`).join("")
     : `<span class="ct miss">${missing}</span>`;
   return line(short, "—SC") + line(long, "—LC");
 }
@@ -415,8 +416,8 @@ function historyTable(list, p){
   for (const s of sorted) {
     const best = bests.get(s.course);
     const isBest = s === best;
-    const t = s.time.cs != null ? qbox(esc(fmt(s.time.cs)), s, p) + qgap(s, p) : esc(s.time.dq ? "DQ" : (s.time.code || s.time.raw));
-    const diff = (!isBest && best && s.time.cs != null) ? ` <span style="color:var(--muted);font:400 .8rem Barlow">+${fmt(s.time.cs - best.time.cs)}</span>` : "";
+    const t = qbox(esc(fmt(s.time.cs)), s, p) + qgap(s, p);
+    const diff = (!isBest && best) ? ` <span style="color:var(--muted);font:400 .8rem Barlow">+${fmt(s.time.cs - best.time.cs)}</span>` : "";
     h += `<tr class="${isBest ? "best" : ""}"><td class="d">${esc(fmtDate(s.date))}</td><td>${esc(s.meet.label)}</td><td>${esc(s.round)}</td>${showCourse ? `<td>${showDist ? s.dist + " " : ""}${esc(s.course)}</td>` : ""}<td class="t">${t}${isBest ? `<span class="badge">Best</span>` : ""}${diff}</td><td>${s.place ?? ""}</td><td>${s.age ?? ""}</td></tr>`;
   }
   return h + `</tbody></table>`;
@@ -501,7 +502,7 @@ function downloadCSV(){
   lines.push(["Swimmer","Course","Event","Date","Meet","Round","Time","Place","Age"].map(q).join(","));
   for (const p of people) for (const [, e] of events) for (const s of (e.by.get(p.key) || [])) {
     lines.push([`${p.first} ${p.last}`, s.course, eventLabel(s.dist,s.stroke), s.date, s.meet.label, s.round,
-      s.time.cs != null ? fmt(s.time.cs) : (s.time.dq ? "DQ" : s.time.code), s.place, s.age].map(q).join(","));
+      fmt(s.time.cs), s.place, s.age].map(q).join(","));
   }
   download(new Blob([lines.join("\r\n")], {type:"text/csv"}), "best-times.csv");
 }

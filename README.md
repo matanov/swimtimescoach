@@ -83,7 +83,9 @@ selected automatically.
 ### 3. Read the table
 Each cell is a swimmer's best time in that event. *"3 swims"* under a time
 means there are more: click the time to see every swim in that event, with the
-best marked. DQ, NS, SCR and DNF never count as a best time.
+best marked. Only swims with a time are shown: scratches (SCR), no-shows (NS),
+DQs and DNFs are left out everywhere, including the swim counts, reports and
+exports.
 
 Two views, switched with **Columns** above the table:
 

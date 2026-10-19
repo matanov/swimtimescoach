@@ -31,7 +31,7 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - A D0 creates up to three swims (prelim, swim-off, final). Each time has its own course code; `X` means DQ.
 - D3 follows only the first D0 for a swimmer in a file, so swimmers are shared per file to propagate the preferred name and 14-char USS ID.
 - D0s with no distance/stroke are relay-only swimmer entries and are skipped.
-- Best time = fastest swim with a valid time; DQ/NS/SCR/DNF never count.
+- Best time = fastest swim with a valid time. Swims without one (DQ/NS/SCR/DNF/NT) are parsed (shared files keep the raw lines) but never shown, counted or exported: `teamSwims()` in app.js drops them, so every view gets only timed swims.
 - Never pick a "best" across courses: yards and meters times aren't comparable. The event view (`courseBests`) keeps one best per course.
 - Meets are never merged by name; `labelMeets` gives same-name meets distinct labels. Show `meet.label` (or `datedLabel` next to a date), not `meet.name`.
 - Saved sessions store the raw file texts, not parsed data, and are re-parsed on open. Bump `VERSION` in `src/session.js` only if `session.json` changes incompatibly.
