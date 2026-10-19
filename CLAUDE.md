@@ -61,6 +61,9 @@ cell to see all swims for that event, and print to PDF or download CSV.
 - The sample team's times are built from the EFSL standards (per-swimmer factor, seed 7) so the demo shows qualifiers, near misses, far-off times and events qualified in one course only. Its season is 2026-27 (around the championship dates) and its swimmers have USS-style IDs with birth dates, so they're judged at their age at the championships: one has a birthday between the two championships, one has a random-format ID with no birth date (amber label). If the standards or the generator change, rerun it, check the mix, rebuild (`npm run build-share`) and retake the screenshots. The demo opens with EFSL quals on.
 - The in-app help (`#help` dialog in `index.html`) and the README user guide say the same things; update both when behavior changes.
 
+## Performance
+- `render` must stay cheap: it runs on every checkbox, view switch and selection change. The print-only every-swim list (`#appendix`) is built only when printing with "Include all swims in print" ticked (`printAppendix`, from the Print button and `beforeprint`), never in `render`. EFSL lookups are cached per swim for one render (`qcache` in `qstd`).
+
 ## Testing changes
 - Add a fixture or extend `tests/gen_fixtures.py` for any parser change, then add a test in `tests/parser.test.js`.
 - For UI changes, check the print preview (landscape) as well as the screen layout, in both light and dark mode.

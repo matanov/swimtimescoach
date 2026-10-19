@@ -294,6 +294,7 @@ function buildGrid(){
 function render(){
   const wrap = document.getElementById("wrap");
   // events qualified in either course ("pkey|dist|stroke"): their other-course times show no gap
+  qcache = new Map();
   state.qualified = state.efsl ? qualifiedEvents(window.EFSL, teamSwims(), state.people, state.champDates) : new Set();
   const missing = selectedPeople().filter(p => !ageAtChamp(p)).length;
   $("qmissing").innerHTML = missing ? ` · <span class="agechip">no birth date</span> ${missing} swimmer${missing === 1 ? "" : "s"} judged at latest age` : "";
@@ -336,7 +337,13 @@ function render(){
   wrap._events = new Map(events);
   const h1 = wrap.querySelector("tr.h1 th.cg");
   wrap.querySelector("table").style.setProperty("--h1", (h1 ? h1.offsetHeight : 0) + "px");
-  renderPrintHead(); renderAppendix(people, events);
+  renderPrintHead();
+  // the every-swim list is print-only and big, so it's built when printing (printAppendix)
+  lastGrid = {people, events}; $("appendix").innerHTML = "";
+}
+let lastGrid = null;
+function printAppendix(){
+  if ($("appendixChk").checked && lastGrid && !$("appendix").innerHTML) renderAppendix(lastGrid.people, lastGrid.events);
 }
 
 // Event view cell: the short-course best(s) then the long-course best, each with
@@ -353,7 +360,13 @@ function stackedTimes(list, p){
 // standard gets a box (qbox); one that doesn't gets the time still to drop (qgap),
 // e.g. "−0.84", underlined the same way: solid = Long Distance, dashed = Short Distance.
 const QUAL = {"long-distance": ["ld", "Long Distance"], "short-distance": ["sd", "Short Distance"]};
-const qstd = (s, p) => state.efsl && p ? standardFor(window.EFSL, s, c => ageAt(p, c, state.champDates), p.sex) : null;
+// one lookup per swim per render: qbox and qgap both ask (the cache is reset in render)
+let qcache = new Map();
+const qstd = (s, p) => {
+  if (!state.efsl || !p) return null;
+  if (!qcache.has(s)) qcache.set(s, standardFor(window.EFSL, s, c => ageAt(p, c, state.champDates), p.sex));
+  return qcache.get(s);
+};
 const qage = (q, p) => `age ${q.age}${ageAtChamp(p) ? " at champs" : ""}`;
 function qbox(html, s, p){
   const q = qstd(s, p);
@@ -649,7 +662,8 @@ $("pickBtn").onclick = openPicker;
 const openHelp = () => $("help").showModal();
 $("helpBtn").onclick = openHelp;
 document.querySelectorAll("[data-help]").forEach(b => b.onclick = openHelp);
-$("printBtn").onclick = () => { document.body.classList.toggle("with-appendix", $("appendixChk").checked); window.print(); };
+$("printBtn").onclick = () => { document.body.classList.toggle("with-appendix", $("appendixChk").checked); printAppendix(); window.print(); };
+window.addEventListener("beforeprint", printAppendix);   // Cmd+P / the browser's own Print
 $("csvBtn").onclick = downloadCSV;
 $("clearBtn").onclick = () => { state.files = []; state.swims = []; state.sources = []; state.team = null; state.sharedAges = null; state.births = {}; state.selected.clear(); state.people.clear(); seenText.clear(); $("msg").textContent = ""; renderFiles(); render(); };
 $("teamOk").onclick = () => closeTeamPicker(document.querySelector("#teamList input:checked")?.value);
