@@ -317,6 +317,29 @@ function nearStandards(standards, swims, people, pct, dates){
     a.swim.stroke - b.swim.stroke || a.swim.dist - b.swim.dist || (COURSE_ORDER[a.swim.course] - COURSE_ORDER[b.swim.course]));
 }
 
+// "Qualified" report: for each person, event and course (SCM/LCM), their best time when
+// it meets the standard, judged at the person's age on the championship's first day.
+// margin = standard - time (how far under). A swimmer who qualified in both courses gets a
+// row for each. Same order as nearStandards.
+function qualifiedRows(standards, swims, people, dates){
+  const best = new Map();
+  for (const s of swims) {
+    if (!people.has(s.pkey) || s.time.cs == null) continue;
+    const k = `${s.pkey}|${s.course}|${s.dist}|${s.stroke}`, b = best.get(k);
+    if (!b || s.time.cs < b.time.cs) best.set(k, s);
+  }
+  const champOrder = new Map((standards?.championships || []).map((c, i) => [c.id, i]));
+  const rows = [];
+  for (const s of best.values()) {
+    const person = people.get(s.pkey), q = standardFor(standards, s, c => ageAt(person, c, dates), person.sex);
+    if (q && q.meets) rows.push({person, swim: s, ...q, margin: q.standard - s.time.cs});
+  }
+  const cmp = (a, b) => a.localeCompare(b, undefined, {sensitivity: "base"});
+  return rows.sort((a, b) => champOrder.get(a.champ) - champOrder.get(b.champ) ||
+    cmp(a.person.last, b.person.last) || cmp(a.person.first, b.person.first) ||
+    a.swim.stroke - b.swim.stroke || a.swim.dist - b.swim.dist || (COURSE_ORDER[a.swim.course] - COURSE_ORDER[b.swim.course]));
+}
+
 /* ------------------------------------------------------------------ sharing
    A shared file carries only the chosen swimmers: their D0/D3 records, plus
    the meet (B1) record and the team (C1) records of teams they swim for.
@@ -366,7 +389,7 @@ function maskIds(texts){
 
 const api = { parseCL2, parseTime, fmt, splitName, sdifDate, norm,
               bestOf, bySwimOrder, assignPeople, labelMeets,
-              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor, nearStandards, qualifiedEvents,
+              listTeams, pairedDist, columnLabel, courseBests, trimToSwimmers, qualifyingChamp, standardFor, nearStandards, qualifiedEvents, qualifiedRows,
               ageOn, birthFromId, ageAt, ageAtChamp, maskIds, checkBirth,
               STROKES, ROUND_ORDER, COURSES, COURSE_ORDER, COURSE_LETTER };
 if (typeof module !== "undefined" && module.exports) module.exports = api;

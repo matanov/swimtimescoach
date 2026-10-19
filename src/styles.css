@@ -172,6 +172,7 @@ footer p{margin:0}
 #near{width:min(900px,96vw)}
 .near-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 20px;border-bottom:1px solid var(--line)}
 .near-tools label{display:inline-flex;align-items:center;gap:6px}
+.near-tools label[hidden]{display:none}
 .near-tools input{width:5.5em;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--bg);color:var(--ink)}
 .near-tools .btn:first-of-type{margin-left:auto}
 .near-kicker{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;margin-top:6px}

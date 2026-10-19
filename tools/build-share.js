@@ -92,7 +92,7 @@ async function buildDemo(template = buildTemplate()){
   const bytes = await saveSession(JSZip, { sources, selected: [...people.keys()], appendix: false, view: "event", efsl: true });
   let html = replaceOnce(template, /<div id="sharednote">[\s\S]*?<\/div>/,
     '<div id="sharednote"><b>Demo</b> with a made-up team and times. EFSL quals is on: a box marks a qualifying time, an underlined number ' +
-    'the time still to drop. Tap any time to see every swim, switch the view, or try <b>Close to qualifying…</b>. ' +
+    'the time still to drop. Tap any time to see every swim, switch the view, or try <b>EFSL reports…</b>. ' +
     'To use your own results, go to <a class="linkbtn" href="https://swimtimescoach.com">swimtimescoach.com</a>.</div>');
   html = replaceOnce(html, /<title>[^<]*<\/title>/, "<title>Best Times demo</title>");
   return html.replace(/<!--SHARE:(\w+)-->/g, (_, k) => k === "data" ? Buffer.from(bytes).toString("base64") : "");

@@ -109,13 +109,13 @@ made-up sample team in [`docs/sample-data/`](docs/sample-data).*
 European Forces Swim League 2025–2028 championship standards: solid for Long
 Distance Champs, dashed for Short Distance Champs. Each swimmer is judged at
 their **age on the championship's first day** (Long Distance 27 Nov 2026,
-Short Distance 27 Feb 2027; the dates can be changed in the Close to qualifying
+Short Distance 27 Feb 2027; the dates can be changed in the EFSL reports
 window), worked out from the birth date in their USS ID, and shown under each
 swimmer's name ("13 at champs", or "12 at LD · 13 at SD" across a birthday).
 Newer USS IDs don't contain a birth date: those swimmers get an amber
 **age 12? · no birth date** label (in the table, the legend count and the
 report) and are judged at their latest age in the results. Tap the label, or
-use the list in the Close to qualifying window, to enter their birth date: it's
+use the list in the EFSL reports window, to enter their birth date: it's
 checked against the ages printed in the results and kept in your saved session.
 Birth dates are only used to work out ages:
 they're never shown or exported, and shared files replace the IDs with
@@ -128,9 +128,14 @@ count if the swimmer will be 13 by the championship, unless it also meets the
 13 standard; a time equal to the standard counts. Only SCM and LCM (EFSL has no yards standards). The
 boxes print, and shared files keep them, legend included.
 
-**Close to qualifying…** (next to EFSL quals) opens a report of the selected
-swimmers' best SCM and LCM times in events they haven't qualified for yet, that
-are within a percentage of the standard, 5% by default and adjustable.
+**EFSL reports…** (next to EFSL quals) opens two reports for the selected
+swimmers, each with one section per championship and printable on its own:
+
+- **Qualified**: everyone who has qualified, A–Z, with each qualifying event,
+  their qualifying time (both courses if they qualified in both), the
+  standard, how far under they are, and where it was swum.
+- **Close to qualifying**: best SCM and LCM times in events not qualified yet
+  that are within a percentage of the standard, 5% by default and adjustable.
 Qualifying is per event: a qualifying time in either SCM or LCM counts, so
 that event is left out of the report and shows no gap in the table. It has one section per
 championship (Long Distance, Short Distance), sorted by swimmer, with the best
@@ -138,7 +143,7 @@ time, the standard, the time and % still to drop, and where the best was swum.
 **Print / Save PDF** prints just the report, each championship starting a new
 page; **Download CSV** gives the same rows.
 
-[![Close to qualifying report within 5%: Long Distance Champs section listing swimmers, events, course, best time, standard, time and % still to drop, and where the best was swum](docs/images/close-to-qualifying.png)](https://swimtimescoach.com/demo.html)
+[![EFSL reports window showing the Qualified report: Long Distance Champs section with each qualifying swimmer, event, course, qualifying time, standard, how far under, and where it was swum](docs/images/efsl-reports.png)](https://swimtimescoach.com/demo.html)
 
 Yards and meters times are never compared, so each course keeps its own best.
 500/1000/1650 yards free share a column with 400/800/1500 meters, and the

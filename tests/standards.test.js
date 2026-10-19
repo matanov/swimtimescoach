@@ -182,3 +182,26 @@ test("a birth date entered by hand must fit the ages in the results", () => {
   // a birthday on the second day of a meet whose results print the age on its first day
   assert.equal(CL2.checkBirth("2013-11-09", [sw("2025-11-09", 11, "2025-11-08")]), null);
 });
+
+test("qualified report lists each swimmer's qualifying times per championship, with the standard", () => {
+  const mk = (pkey, dist, stroke, course, time, date) => ({ pkey, dist, stroke, course, date, time: CL2.parseTime(time, "") });
+  const people = new Map([
+    ["ANNA", { key: "ANNA", last: "Zeta", first: "Anna", lastAge: 12, sex: "F" }],
+    ["BEA", { key: "BEA", last: "Alpha", first: "Bea", lastAge: 13, sex: "F" }],
+  ]);
+  const swims = [
+    mk("ANNA", 400, "1", "SCM", "6:25.00", "2025-10-01"),   // 12 F LD 400 Free SCM 6:22.69: not yet
+    mk("ANNA", 400, "1", "SCM", "6:20.00", "2025-11-01"),   // her best: qualifies, 2.69 under
+    mk("ANNA", 400, "1", "LCM", "6:30.00", "2025-12-01"),   // LCM 6:32.89: qualifies too, 2.89 under
+    mk("ANNA", 50, "1", "SCM", "40.00", "2025-11-01"),      // SD 36.29: not qualified, not listed
+    mk("BEA", 100, "1", "LCM", "1:19.59", "2025-12-01"),    // 13 F SD 100 Free LCM 1:19.59: equal counts
+  ];
+  const rows = CL2.qualifiedRows(EFSL, swims, people);
+  assert.deepEqual(rows.map(r => [r.champ, r.person.first, `${r.swim.dist} ${r.swim.course}`, CL2.fmt(r.swim.time.cs), CL2.fmt(r.standard), r.margin]),
+    [["long-distance", "Anna", "400 SCM", "6:20.00", "6:22.69", 269], ["long-distance", "Anna", "400 LCM", "6:30.00", "6:32.89", 289],
+     ["short-distance", "Bea", "100 LCM", "1:19.59", "1:19.59", 0]]);
+  // at her age at the championship: born 2014-01-15 she is 13 at Short Distance Champs, where 40.00 still isn't enough,
+  // and 12 at Long Distance Champs, so the 400 Free rows stay
+  const aged = new Map([...people].map(([k, p]) => [k, k === "ANNA" ? { ...p, birth: "2014-01-15" } : p]));
+  assert.equal(CL2.qualifiedRows(EFSL, swims, aged).filter(r => r.person.first === "Anna").length, 2);
+});
