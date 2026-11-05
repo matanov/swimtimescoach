@@ -135,3 +135,8 @@ td.tick,th.tick{width:34px;text-align:center}
   .cv table.rep tr.grp{break-after:avoid}
   .rep-sign{break-inside:avoid}
 }
+
+/* Two-pool meet: course per event */
+.seg.sm{border-width:1px}
+.seg.sm span{padding:2px 12px;font-size:15px}
+.cv tr.ev-other td:first-child{font-weight:600;box-shadow:inset 3px 0 0 var(--lane)}

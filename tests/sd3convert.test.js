@@ -70,7 +70,7 @@ test("standard conversion skips events without a factor and ambiguous yard dista
 });
 
 test("custom factor multiplies and adds seconds per 100", () => {
-  const plan = X.plan(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{SCM:1.02, SCY:1.13}, off:0.5});
+  const plan = X.plan(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{LCM:{SCM:1.02, SCY:1.13}}, off:0.5});
   const c = plan.changes.find(c => c.it.raw.trim() === "29.84");
   assert.equal(c.newSecs, Math.round((29.84 * 1.02 + 0.25) * 100) / 100);
   assert.equal(c.newRaw, "   30.69");
@@ -121,7 +121,7 @@ test("review lists every entry with original, relabeled and converted times", ()
 });
 
 test("review uses custom factors when chosen and marks unselected courses", () => {
-  const rv = X.review(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{SCM:1.02, SCY:1.13}, srcs:{SCM:true, SCY:false}});
+  const rv = X.review(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{LCM:{SCM:1.02, SCY:1.13}}, srcs:{SCM:true, SCY:false}});
   assert.equal(rv.method, "custom");
   assert.equal(rv.rows.find(r => r.orig.time === "29.84").converted.time, "30.44");
   const y = rv.rows.find(r => r.orig.course === "SCY");
@@ -131,9 +131,9 @@ test("review uses custom factors when chosen and marks unselected courses", () =
 test("review CSV has a header and one quoted row per entry", () => {
   const csv = X.reviewCSV(X.review(sample(), {...ALL, tgt:"LCM", method:"standard"}));
   const rows = csv.trim().split("\r\n");
-  assert.match(rows[0], /^Line,Swimmer,Age,Sex,Event,Field,Original time/);
+  assert.match(rows[0], /^Line,Swimmer,Age,Sex,Event,Field,Target course,Original time/);
   assert.equal(rows.length, 15);
-  assert.ok(rows.some(r => r.startsWith('4,"Rossi, Giulia A",14,F,50 Free,Seed,29.84,SCM,29.84,LCM,')));
+  assert.ok(rows.some(r => r.startsWith('4,"Rossi, Giulia A",14,F,50 Free,Seed,LCM,29.84,SCM,29.84,LCM,')));
 });
 
 test("review is sorted A–Z by swimmer, then stroke and distance, relays last", () => {
@@ -143,4 +143,53 @@ test("review is sorted A–Z by swimmer, then stroke and distance, relays last",
   assert.deepEqual(rv.rows.filter(r => r.who === "Rossi, Giulia A").map(r => r.event), ["50 Free", "100 Free", "200 IM"]);
   assert.deepEqual(rv.rows.filter(r => r.who === "Conti, Sofia L").map(r => r.event), ["400 Free", "100 Breast", "200 Breast"]);
   assert.deepEqual(rv.rows.slice(-2).map(r => r.event), ["200 Free Relay", "200 Medley Relay"]);
+});
+
+test("events lists each event once with counts per course, relays last", () => {
+  const ev = X.events(sample());
+  assert.deepEqual(ev.slice(0, 3).map(e => e.event), ["50 Free", "100 Free", "200 Free"]);
+  assert.deepEqual(ev.slice(-2).map(e => e.event), ["200 Free Relay", "200 Medley Relay"]);
+  const f50 = ev.find(e => e.key === "501");
+  assert.deepEqual(f50.counts, {SCM:1});
+});
+
+test("two-pool meet: per-event target course", () => {
+  const p = sample();
+  // Default LCM; 50 Free and 100 Breast swum in the 25 m pool.
+  const o = {...ALL, tgt:"LCM", method:"standard", perEvent:{"501":"SCM", "1003":"SCM"}};
+  const plan = X.plan(p, o);
+  const get = (who, ev) => plan.changes.find(c => c.it.who === who && c.it.event === ev);
+  assert.equal(get("Rossi, Giulia A", "50 Free"), undefined);          // already SCM: left as is
+  assert.equal(get("Conti, Sofia L", "100 Breast"), undefined);
+  const lcm = get("Rossi, Giulia A", "100 Free");
+  assert.equal(lcm, undefined);                                         // already LCM
+  const c = get("Conti, Sofia L", "200 Breast");
+  assert.equal(c.tgt, "LCM"); assert.equal(c.newCode, "L"); assert.ok(c.newSecs > c.it.secs);
+  assert.equal(plan.meetChange, null);                                  // meet course follows the default (already LCM)
+  // An LCM time in an event set to SCM is converted down.
+  const d = X.plan(p, {...o, perEvent:{"1001":"SCM"}}).changes.find(c => c.it.raw.trim() === "1:04.12");
+  assert.equal(d.tgt, "SCM"); assert.equal(d.newCode, "S"); assert.ok(d.newSecs < d.it.secs);
+  const out = X.parse(X.build(p, plan));
+  assert.deepEqual(out.items.filter(i => i.event === "50 Free").map(i => i.course), ["SCM"]);
+  assert.deepEqual(out.items.filter(i => i.event === "200 Breast").map(i => i.course), ["LCM"]);
+});
+
+test("two-pool meet: custom factors per target, review and CSV show each target", () => {
+  const o = {...ALL, tgt:"SCM", method:"custom", perEvent:{"2002":"LCM"},
+    fac:{SCM:{LCM:0.98, SCY:1.11}, LCM:{SCM:1.02, SCY:1.13}}};
+  const plan = X.plan(sample(), o);
+  const back = plan.changes.find(c => c.it.event === "100 Back");     // SCM, stays SCM: no change
+  assert.equal(back, undefined);
+  const b200 = plan.changes.find(c => c.it.event === "200 Back");     // LCM, event set to LCM
+  assert.equal(b200, undefined);
+  const free = plan.changes.find(c => c.it.raw.trim() === "1:04.12"); // LCM → SCM × 0.98
+  assert.equal(free.newSecs, Math.round(64.12 * 0.98 * 100) / 100);
+  const rv = X.review(sample(), {...o, perEvent:{"1002":"LCM"}});
+  assert.ok(rv.mixed);
+  assert.deepEqual(rv.other, [{event:"100 Back", tgt:"LCM"}]);
+  const r = rv.rows.find(r => r.event === "100 Back");
+  assert.deepEqual([r.tgt, r.status, r.converted.time], ["LCM", "change", X.fmtTime(Math.round(69.55 * 1.02 * 100) / 100)]);
+  assert.match(X.reviewCSV(rv), /,100 Back,Seed,LCM,1:09\.55,SCM,1:09\.55,LCM,/);
+  assert.equal(X.review(sample(), {...o, perEvent:{"1002":"SCM"}}).mixed, false);
+  assert.match(X.plan(sample(), {...o, fac:{SCM:{LCM:0.98}}}).skipped[0].why, /no valid factor for SCY to SCM/);
 });

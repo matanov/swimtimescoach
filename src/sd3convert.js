@@ -113,24 +113,46 @@ function standardRelay(T, src, tgt, dist, stroke){
   return {t:sum};
 }
 
+/* Event key: distance + stroke code, e.g. "1001" = 100 Free, "2006" = 200 Free Relay. */
+const evKey = it => `${it.dist}${it.stroke}`;
+/* Target course of one entry: its event's own course in a two-pool meet
+   (o.perEvent), else the default o.tgt. */
+const targetOf = (it, o) => (o.perEvent && CODE[o.perEvent[evKey(it)]]) ? o.perEvent[evKey(it)] : o.tgt;
+
+/* Events in the file, relays last, then by stroke and distance, with counts per course. */
+function events(parsed){
+  const ev = new Map();
+  for (const it of parsed.items) {
+    const k = evKey(it);
+    const e = ev.get(k) || ev.set(k, {key:k, event:it.event, relay:it.relay, dist:it.dist, stroke:it.stroke, counts:{}}).get(k);
+    const c = (it.secs == null || !CODE[it.course]) ? "NT" : it.course;
+    e.counts[c] = (e.counts[c] || 0) + 1;
+  }
+  const so = e => STROKE_ORDER[STROKE[e.stroke]] || 9;
+  return [...ev.values()].sort((a, b) => (a.relay - b.relay) || (so(a) - so(b)) || (a.dist - b.dist));
+}
+
 /* Decide every change.
    o = {tgt:"LCM"|"SCM", method:"relabel"|"standard"|"custom",
+        perEvent:{"501":"SCM",...} (optional, two-pool meets; others use tgt),
         fields:[seed,prelim,swimoff,finals], srcs:{SCM:true,...},
-        fac:{SCM:1.02,...}, off:secondsPer100, relays:bool, meet:bool} */
+        fac:{LCM:{SCM:1.02,SCY:1.13}, SCM:{...}} (per target, then source course),
+        off:secondsPer100, relays:bool, meet:bool} */
 function plan(parsed, o){
   const changes = [], skipped = [];
   for (const it of parsed.items) {
     if (!o.fields[it.fi] || (it.relay && !o.relays)) continue;
-    if (!CODE[it.course] || it.course === o.tgt || !o.srcs[it.course]) continue;
+    const tgt = targetOf(it, o);
+    if (!CODE[it.course] || it.course === tgt || !o.srcs[it.course]) continue;
     let newSecs = it.secs, newRaw = it.raw;
     if (it.secs != null && o.method !== "relabel") {
       if (o.method === "standard") {
-        const r = (it.relay ? standardRelay : standard)(it.secs, it.course, o.tgt, it.dist, it.stroke);
+        const r = (it.relay ? standardRelay : standard)(it.secs, it.course, tgt, it.dist, it.stroke);
         if (r.err) { skipped.push({it, why:r.err}); continue; }
         newSecs = r.t;
       } else {
-        const f = o.fac[it.course];
-        if (!(f > 0)) { skipped.push({it, why:`no valid factor for ${it.course}`}); continue; }
+        const f = ((o.fac || {})[tgt] || {})[it.course];
+        if (!(f > 0)) { skipped.push({it, why:`no valid factor for ${it.course} to ${tgt}`}); continue; }
         newSecs = it.secs * f + (o.off || 0) * (it.dist / 100);
       }
       newSecs = Math.round(newSecs * 100) / 100;
@@ -138,7 +160,7 @@ function plan(parsed, o){
       if (t.length > 8) { skipped.push({it, why:"converted time does not fit the 8-character field"}); continue; }
       newRaw = t.padStart(8, " ");
     }
-    changes.push({it, newSecs, newRaw, newCode: CODE[o.tgt][/[0-9]/.test(it.codeChar) ? 0 : 1]});
+    changes.push({it, tgt, newSecs, newRaw, newCode: CODE[tgt][/[0-9]/.test(it.codeChar) ? 0 : 1]});
   }
   const m = parsed.meet; let meetChange = null;
   if (o.meet && m && m.course && m.course !== o.tgt && m.courseLine != null)
@@ -182,26 +204,26 @@ function review(parsed, o){
   const convMap = new Map(conv.changes.map(c => [c.it, c]));
   const skipMap = new Map(conv.skipped.map(s => [s.it, s.why]));
   const rows = parsed.items.filter(it => o.fields[it.fi] && (o.relays || !it.relay)).map(it => {
-    const r = relMap.get(it), c = convMap.get(it), skip = skipMap.get(it);
+    const r = relMap.get(it), c = convMap.get(it), skip = skipMap.get(it), tgt = targetOf(it, o);
     const orig = {time: it.raw.trim() || "NT", course: CODE[it.course] ? it.course : ""};
     let status, relabeled, converted, delta = null;
     if (it.secs == null) status = "nt";
-    else if (it.course === o.tgt) status = "same";
+    else if (it.course === tgt) status = "same";
     else if (!CODE[it.course] || !o.srcs[it.course] || (it.relay && !o.relays)) status = "excluded";
     else if (skip) status = "skipped";
     else status = "change";
-    relabeled = r ? {time: r.newRaw.trim() || "NT", course: o.tgt} : {...orig};
-    if (c) { converted = {time: c.newRaw.trim() || "NT", course: o.tgt}; if (it.secs != null) delta = Math.round((c.newSecs - it.secs) * 100) / 100; }
+    relabeled = r ? {time: r.newRaw.trim() || "NT", course: tgt} : {...orig};
+    if (c) { converted = {time: c.newRaw.trim() || "NT", course: tgt}; if (it.secs != null) delta = Math.round((c.newSecs - it.secs) * 100) / 100; }
     else if (skip) converted = null;
     else converted = {...orig};
     const notes = [];
-    if (status === "same") notes.push(`already ${o.tgt}`);
+    if (status === "same") notes.push(`already ${tgt}`);
     if (status === "nt") notes.push("no time");
     if (status === "excluded") notes.push("not converted (course not selected)");
     if (skip) notes.push(`no conversion: ${skip}`);
     if (isUnusual(it)) notes.push("check time: unusual pace");
     return {line: it.li + 1, who: it.who, age: it.age, sex: it.sex, relay: it.relay, event: it.event,
-            field: FIELDS[it.fi], orig, relabeled, converted, delta, status, unusual: isUnusual(it), note: notes.join("; ")};
+            field: FIELDS[it.fi], tgt, orig, relabeled, converted, delta, status, unusual: isUnusual(it), note: notes.join("; ")};
   });
   // Swimmers A–Z by "Last, First"; each swimmer's events by stroke, distance, field; relays last.
   const byName = (a, b) => a.localeCompare(b, undefined, {sensitivity:"base"});
@@ -212,7 +234,11 @@ function review(parsed, o){
     (a.relay ? byName(a.who, b.who) : 0) ||
     (FIELDS.indexOf(a.field) - FIELDS.indexOf(b.field)) || (a.line - b.line));
   const count = s => rows.filter(r => r.status === s).length;
-  return {rows, tgt: o.tgt, method: convMethod, fac: o.fac, off: o.off || 0, meetChange: !!rel.meetChange,
+  // Two-pool meet: the events whose course differs from the default.
+  const other = events(parsed).filter(e => targetOf(e, o) !== o.tgt).map(e => ({event:e.event, tgt:targetOf(e, o)}));
+  const used = new Set([o.tgt, ...other.map(e => e.tgt)]);
+  return {rows, tgt: o.tgt, mixed: other.length > 0, other, method: convMethod,
+          fac: Object.fromEntries(Object.entries(o.fac || {}).filter(([t]) => used.has(t))), off: o.off || 0, meetChange: !!rel.meetChange,
           counts: {total: rows.length, change: count("change"), same: count("same"), nt: count("nt"),
                    skipped: count("skipped"), excluded: count("excluded"), unusual: rows.filter(r => r.unusual).length}};
 }
@@ -220,10 +246,10 @@ function review(parsed, o){
 /* Review as CSV (UTF-8, comma separated, quoted where needed). */
 function reviewCSV(rv){
   const q = v => { const s = v == null ? "" : String(v); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const head = ["Line","Swimmer","Age","Sex","Event","Field","Original time","Original course",
+  const head = ["Line","Swimmer","Age","Sex","Event","Field","Target course","Original time","Original course",
     "Relabeled time","Relabeled course","Converted time","Converted course","Change (s)","Status","Note"];
   const out = [head.join(",")];
-  for (const r of rv.rows) out.push([r.line, r.who, r.age, r.sex, r.event, r.field, r.orig.time, r.orig.course,
+  for (const r of rv.rows) out.push([r.line, r.who, r.age, r.sex, r.event, r.field, r.tgt, r.orig.time, r.orig.course,
     r.relabeled.time, r.relabeled.course, r.converted ? r.converted.time : "", r.converted ? r.converted.course : "",
     r.delta == null ? "" : r.delta.toFixed(2), r.status, r.note].map(q).join(","));
   return out.join("\r\n") + "\r\n";
@@ -258,7 +284,7 @@ function sampleText(){
   ].join("\r\n") + "\r\n";
 }
 
-const api = {parse, plan, build, review, reviewCSV, isUnusual, standard, standardRelay, parseTime, fmtTime, sampleText,
+const api = {parse, plan, build, review, reviewCSV, events, evKey, targetOf, isUnusual, standard, standardRelay, parseTime, fmtTime, sampleText,
              COURSE, CODE, STROKE, FIELDS, TF};
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.SD3Convert = api;

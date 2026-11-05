@@ -203,6 +203,12 @@ It's a page of the website only, not part of the downloadable one-file app.
      by leg, assuming four equal splits.
    - **Custom factor:** your own multiplier for each source course, plus
      optional seconds per 100.
+   - **Meet in two pools** (some events long course, some short course): tick
+     **Different course for some events** and set each event to LCM or SCM.
+     The course chosen at the top is the default for every other event and
+     for the meet course in the file. Custom factors are then asked for each
+     target course. The coach review and its CSV show each entry's target
+     course.
 4. Review the before-and-after list and **Save converted file**. Your original
    file isn't changed. Only the time fields and their course codes are
    rewritten; every other character and line ending stays the same.

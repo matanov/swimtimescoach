@@ -7,7 +7,7 @@ const $ = id => document.getElementById(id);
 const {FIELDS, CODE} = X;
 const ORDER = ["SCM","SCY","LCM","NT"];
 
-let state = {name:"", parsed:null, sample:true, outName:""};
+let state = {name:"", parsed:null, sample:true, outName:"", perEvent:{}, facPrev:{}};
 let lastPlan = null;
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -75,33 +75,58 @@ function renderStats(){
 /* ---------- step 3: options ---------- */
 const tgtNow = () => document.querySelector("input[name=tgt]:checked").value;
 const methodNow = () => document.querySelector("input[name=method]:checked").value;
+const mixedNow = () => $("mixed").checked;
+/* Target settings only: default course plus per-event courses in a two-pool meet. */
+const tgtOpts = () => ({tgt:tgtNow(), perEvent: mixedNow() ? state.perEvent : null});
+const targetsUsed = () => {
+  const o = tgtOpts(); if (!o.perEvent || !state.parsed) return [o.tgt];
+  return [...new Set([o.tgt, ...X.events(state.parsed).map(e => X.targetOf(e, o))])];
+};
+
+/* Two-pool meet: one row per event with its own LCM / SCM switch. */
+function renderEvents(){
+  const on = mixedNow(), tgt = tgtNow();
+  $("evBox").hidden = !on;
+  $("tgtLabel").textContent = on ? "Default course" : "Make every time";
+  $("meetTgtWord").textContent = on ? `default (${tgt})` : tgt;
+  if (!on || !state.parsed) { $("evTgtTbl").innerHTML = ""; return; }
+  const o = tgtOpts();
+  $("evTgtTbl").innerHTML = `<thead><tr><th>Event</th><th>Times now</th><th>Make it</th></tr></thead><tbody>` +
+    X.events(state.parsed).map(e => {
+      const cur = X.targetOf(e, o);
+      const now = ORDER.filter(c => e.counts[c]).map(c => `${chip(c)} <span class="small">${e.counts[c]}</span>`).join(" ");
+      return `<tr class="${cur !== tgt ? "ev-other" : ""}"><td>${esc(e.event)}</td><td>${now}</td><td><div class="seg sm" role="radiogroup" aria-label="Course for ${esc(e.event)}">` +
+        ["LCM","SCM"].map(c => `<label><input type="radio" name="ev${e.key}" value="${c}" data-ev="${e.key}"${cur === c ? " checked" : ""}><span>${c}</span></label>`).join("") +
+        `</div></td></tr>`;
+    }).join("") + "</tbody>";
+}
 
 function renderSrc(){
-  const its = state.parsed ? state.parsed.items : [], tgt = tgtNow();
-  const present = ["SCM","SCY","LCM"].filter(c => c !== tgt && its.some(i => i.course === c));
+  const its = state.parsed ? state.parsed.items : [], tgt = tgtNow(), o = tgtOpts();
+  const present = ["SCM","SCY","LCM"].filter(c => its.some(i => i.course === c && X.targetOf(i, o) !== c));
   const prev = {}; document.querySelectorAll("#srcChecks input").forEach(x => prev[x.value] = x.checked);
   $("srcChecks").innerHTML = present.length ? present.map(c => {
     const n = its.filter(i => i.course === c).length;
     return `<label><input type="checkbox" id="src${c}" value="${c}" ${prev[c] === false ? "" : "checked"}> ${chip(c)} <span class="muted small">${n}</span></label>`;
-  }).join("") : `<span class="muted small">Every time is already ${tgt}.</span>`;
+  }).join("") : `<span class="muted small">Every time is already ${o.perEvent ? "on its event's course" : tgt}.</span>`;
 }
 
 function renderCustom(){
-  const box = $("customBox"), tgt = tgtNow();
+  const box = $("customBox");
   box.hidden = methodNow() !== "custom";
   const defaults = {LCM:{SCM:1.02, SCY:1.13}, SCM:{LCM:0.98, SCY:1.11}};
-  const prev = {}; box.querySelectorAll("input[data-src]").forEach(x => prev[x.id] = x.value);
+  box.querySelectorAll("input[data-src]").forEach(x => state.facPrev[x.id] = x.value);   // kept across target switches
   const prevOff = ($("cOffset") || {}).value;
-  box.innerHTML = ["SCM","SCY","LCM"].filter(c => c !== tgt).map(s => {
-    const id = `fac${s}to${tgt}`, v = prev[id] ?? defaults[tgt][s];
-    return `<div class="field"><label class="k" for="${id}">${s} → ${tgt} factor</label><input id="${id}" data-src="${s}" type="number" step="0.001" min="0.5" max="2" value="${v}"></div>`;
-  }).join("") + `<div class="field"><label class="k" for="cOffset">Add seconds per 100</label><input id="cOffset" type="number" step="0.01" value="${prevOff ?? 0}"></div>`;
+  box.innerHTML = targetsUsed().flatMap(tgt => ["SCM","SCY","LCM"].filter(c => c !== tgt).map(s => {
+    const id = `fac${s}to${tgt}`, v = state.facPrev[id] ?? defaults[tgt][s];
+    return `<div class="field"><label class="k" for="${id}">${s} → ${tgt} factor</label><input id="${id}" data-src="${s}" data-tgt="${tgt}" type="number" step="0.001" min="0.5" max="2" value="${v}"></div>`;
+  })).join("") + `<div class="field"><label class="k" for="cOffset">Add seconds per 100</label><input id="cOffset" type="number" step="0.01" value="${prevOff ?? 0}"></div>`;
 }
 
 function opts(){
   const srcs = {}; document.querySelectorAll("#srcChecks input").forEach(x => srcs[x.value] = x.checked);
-  const fac = {}; document.querySelectorAll("#customBox input[data-src]").forEach(x => fac[x.dataset.src] = parseFloat(x.value));
-  return {tgt:tgtNow(), method:methodNow(),
+  const fac = {}; document.querySelectorAll("#customBox input[data-src]").forEach(x => (fac[x.dataset.tgt] ||= {})[x.dataset.src] = parseFloat(x.value));
+  return {...tgtOpts(), method:methodNow(),
     fields:[$("fSeed").checked, $("fPrelim").checked, $("fSwimoff").checked, $("fFinals").checked],
     srcs, fac, off:parseFloat(($("cOffset") || {}).value) || 0, relays:$("fRelay").checked, meet:$("fMeet").checked};
 }
@@ -120,7 +145,9 @@ function renderPreview(){
     `<div><div class="k">Meet course</div><div class="v">${p.meetChange ? `${chip(m.course)} → ${chip(o.tgt)}` : (m.course ? chip(m.course) + " unchanged" : "–")}</div></div>`;
   let w = "";
   if (o.method === "relabel" && p.changes.length)
-    w += `<div class="note info"><span class="small">Relabel only: times stay as swum. ${o.tgt === "LCM"
+    w += `<div class="note info"><span class="small">Relabel only: times stay as swum. ${o.perEvent
+      ? "Short course times labeled LCM will usually seed swimmers faster than they swim in a 50 m pool, and long course times labeled SCM slower."
+      : o.tgt === "LCM"
       ? "Short course times labeled LCM will usually seed swimmers faster than they swim in a 50 m pool."
       : "Long course times labeled SCM will usually seed swimmers slower than their short course ability."}</span></div>`;
   if (p.skipped.length)
@@ -131,11 +158,11 @@ function renderPreview(){
     (p.changes.length ? p.changes.map(c => {
       const d = (c.it.secs != null && c.newSecs != null) ? c.newSecs - c.it.secs : 0;
       return `<tr><td class="n mono">${c.it.li + 1}</td><td>${esc(c.it.who)}</td><td>${esc(c.it.event)}</td><td>${FIELDS[c.it.fi]}</td>` +
-        `<td class="t">${esc(c.it.raw.trim() || "–")}</td><td>${chip(c.it.course)}</td><td class="t">${esc(c.newRaw.trim() || "–")}</td><td>${chip(o.tgt)}</td>` +
+        `<td class="t">${esc(c.it.raw.trim() || "–")}</td><td>${chip(c.it.course)}</td><td class="t">${esc(c.newRaw.trim() || "–")}</td><td>${chip(c.tgt)}</td>` +
         `<td class="t ${d > 0 ? "delta-up" : d < 0 ? "delta-down" : "zero"}">${d ? (d > 0 ? "+" : "") + d.toFixed(2) : "0.00"}</td></tr>`;
     }).join("") : `<tr><td colspan="9" class="muted">Nothing to change with these options.</td></tr>`) + "</tbody>";
   const base = state.name.replace(/\.[^.]+$/, "") || "converted", ext = (state.name.match(/\.[^.]+$/) || [".sd3"])[0];
-  state.outName = `${base}_${o.tgt}_${{relabel:"relabel", standard:"std", custom:"custom"}[o.method]}${ext}`;
+  state.outName = `${base}_${targetsUsed().length > 1 ? "mixed" : o.tgt}_${{relabel:"relabel", standard:"std", custom:"custom"}[o.method]}${ext}`;
   $("dlName").innerHTML = `<span class="mono">${esc(state.outName)}</span>`;
   $("dl").disabled = !(p.changes.length || p.meetChange);
   renderReport(o);
@@ -146,11 +173,18 @@ let lastReview = null;
 const nowStamp = () => new Date().toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
 function methodText(rv){
   if (rv.method === "custom")
-    return "Custom: " + Object.entries(rv.fac).filter(([, f]) => f > 0).map(([c, f]) => `${c} × ${f}`).join(", ") +
+    return "Custom: " + Object.entries(rv.fac).flatMap(([t, by]) => Object.entries(by).filter(([, f]) => f > 0)
+      .map(([c, f]) => `${c} → ${t} × ${f}`)).join(", ") +
       (rv.off ? `, ${rv.off > 0 ? "+" : ""}${rv.off} s per 100` : "");
   return "Standard: Swim England equivalent-time formula";
 }
 const tcell = (t, strong) => t ? `<span class="${strong ? "rt strong" : "rt"}">${esc(t.time)}</span> <span class="rc">${esc(t.course)}</span>` : `<span class="rt muted">–</span>`;
+/* "LCM", or for a two-pool meet "LCM, except SCM: 50 Free, 100 Breast". */
+function proposedText(rv){
+  if (!rv.mixed) return rv.tgt;
+  const by = {}; rv.other.forEach(e => (by[e.tgt] ||= []).push(e.event));
+  return `${rv.tgt}, except ` + Object.entries(by).map(([t, evs]) => `${t}: ${evs.join(", ")}`).join("; ");
+}
 function renderReport(o){
   const rv = X.review(state.parsed, o); lastReview = rv;
   const m = state.parsed.meet, k = rv.counts;
@@ -160,11 +194,11 @@ function renderReport(o){
     ["Meet dates", esc(dates.length === 2 && dates[0] !== dates[1] ? dates.join(" – ") : (dates[0] || "–"))],
     ["Meet course", m.course ? esc(m.course) + (rv.meetChange && o.meet ? ` → ${rv.tgt}` : "") : "–"],
     ["File", `<span class="mono">${esc(state.sample ? "built-in sample" : state.name)}</span>`],
-    ["Proposed course", esc(rv.tgt)],
+    ["Proposed course", esc(proposedText(rv))],
     ["Converted column", esc(methodText(rv))],
     ["Prepared", esc(nowStamp())]
   ].map(([a, b]) => `<div><span class="k">${a}</span> ${b}</div>`).join("");
-  const summary = [[k.total, "entries"], [k.change, `to change to ${rv.tgt}`], [k.same, `already ${rv.tgt}`], [k.nt, "no time"],
+  const summary = [[k.total, "entries"], [k.change, rv.mixed ? "to change course" : `to change to ${rv.tgt}`], [k.same, rv.mixed ? "already on their course" : `already ${rv.tgt}`], [k.nt, "no time"],
     [k.skipped, "no standard conversion"], [k.excluded, "not selected"], [k.unusual, "to check"]]
     .filter(([n], i) => i < 2 || n).map(([n, t]) => `<b>${n}</b> ${t}`).join(" · ");
   let body = "", group = null;
@@ -188,16 +222,16 @@ function renderReport(o){
     (rv.rows.length ? `<div class="rep-tbl"><table class="rep"><thead><tr><th class="tick">OK</th><th>Event</th><th>Field</th>` +
       `<th class="n">Original</th><th class="n">Relabeled</th><th class="n">Converted</th><th class="n">Change s</th><th>Note</th></tr></thead><tbody>${body}</tbody></table></div>`
       : `<p class="muted">No entries in the selected time fields.</p>`) +
-    `<p class="rep-legend small muted">Original: as exported. Relabeled: same time, course code changed to ${esc(rv.tgt)}. ` +
+    `<p class="rep-legend small muted">Original: as exported. Relabeled: same time, course code changed to ${esc(rv.mixed ? "the event's course" : rv.tgt)}. ` +
     `Converted: ${esc(methodText(rv))}, rounded to the hundredth. Tick OK for each entry you approve.</p>` +
     `<div class="rep-sign"><span>Reviewed by</span><span>Date</span><span>Signature</span></div>`;
   const base = state.name.replace(/\.[^.]+$/, "") || "entries";
-  state.repBase = `${base}_review_${rv.tgt}`;
+  state.repBase = `${base}_review_${rv.mixed ? "mixed" : rv.tgt}`;
   $("repName").innerHTML = `<span class="mono">${esc(state.repBase)}.csv</span>`;
   $("repPrint").disabled = $("repCsv").disabled = !rv.rows.length;
 }
 
-function refresh(){ renderSrc(); renderCustom(); renderPreview(); }
+function refresh(){ renderEvents(); renderSrc(); renderCustom(); renderPreview(); }
 
 function load(text, name, isSample){
   $("loadErr").hidden = true;
@@ -207,7 +241,7 @@ function load(text, name, isSample){
     $("loadErr").innerHTML = `<b>That file doesn't look like SDIF.</b><span class="small">No meet (B1) or entry (D0/E0) records found. Open the .sd3 or .cl2 file itself, not the .zip.</span>`;
     return;
   }
-  state = {name, parsed, sample:isSample, outName:""};
+  state = {name, parsed, sample:isSample, outName:"", perEvent:{}, facPrev:state.facPrev || {}};
   $("fname").textContent = isSample ? "built-in example (fictional swimmers)" : name;
   $("srcBadge").textContent = isSample ? "Sample" : "Your file";
   $("srcBadge").className = "badge" + (isSample ? " sample" : "");
@@ -232,9 +266,12 @@ document.addEventListener("drop", e => {
   e.preventDefault(); drop.classList.remove("over");
   const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) readFile(f);
 });
-document.querySelectorAll("input[name=tgt],input[name=method]").forEach(x => x.addEventListener("change", refresh));
-$("s3").addEventListener("input", renderPreview);
-$("s3").addEventListener("change", e => { if (!e.target.matches("input[name=tgt],input[name=method]")) renderPreview(); });
+const RESHAPE = "input[name=tgt],input[name=method],#mixed,input[data-ev]";   // these change which controls are shown
+$("s3").addEventListener("input", e => { if (!e.target.matches(RESHAPE)) renderPreview(); });
+$("s3").addEventListener("change", e => {
+  if (e.target.matches("input[data-ev]")) state.perEvent[e.target.dataset.ev] = e.target.value;
+  if (e.target.matches(RESHAPE)) refresh(); else renderPreview();
+});
 function saveFile(text, name, type){
   const url = URL.createObjectURL(new Blob([text], {type}));
   const a = document.createElement("a"); a.href = url; a.download = name;

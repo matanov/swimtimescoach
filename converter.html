@@ -63,11 +63,17 @@
   <div class="step-h"><span class="step-n">STEP 3</span><h2>Convert</h2></div>
   <div class="opts">
     <div class="field">
-      <span class="k">Make every time</span>
+      <span class="k" id="tgtLabel">Make every time</span>
       <div class="seg" role="radiogroup" aria-label="Target course">
         <label><input type="radio" name="tgt" id="tgtLCM" value="LCM" checked><span>LCM</span></label>
         <label><input type="radio" name="tgt" id="tgtSCM" value="SCM"><span>SCM</span></label>
       </div>
+      <div class="checks"><label><input type="checkbox" id="mixed"> Different course for some events <span class="muted small">(meet in two pools)</span></label></div>
+    </div>
+    <div class="field" id="evBox" hidden>
+      <span class="k">Course per event</span>
+      <p class="small muted">Each event starts on the default course. Switch the events swum in the other pool.</p>
+      <div class="tbl-wrap"><table id="evTgtTbl"></table></div>
     </div>
     <div class="field">
       <span class="k">How</span>
@@ -93,7 +99,7 @@
         <label><input type="checkbox" id="fSwimoff" checked> Swim-off</label>
         <label><input type="checkbox" id="fFinals" checked> Finals</label>
         <label><input type="checkbox" id="fRelay" checked> Include relays</label>
-        <label><input type="checkbox" id="fMeet" checked> Set meet course to target</label>
+        <label><input type="checkbox" id="fMeet" checked> Set meet course to <span id="meetTgtWord">target</span></label>
       </div>
     </div>
   </div>
@@ -130,10 +136,11 @@
         <li>Export the entries or results from TeamUnify. Unzip it if it arrives as a <code>.zip</code>.</li>
         <li>Open the file here with <b>Choose .sd3 / .cl2</b> or drag it onto the box.</li>
         <li>Check Step 2: how many times are SCM, SCY, LCM, and any unusual times to fix in TeamUnify first.</li>
-        <li>Pick the target course, then the method. The preview updates as you change options.</li>
+        <li>Pick the target course, then the method. For a meet held in two pools, tick <b>Different course for some events</b> and set each event's course. The preview updates as you change options.</li>
         <li>Review the changes and any skipped lines, then <b>Save converted file</b>.</li>
         <li>For the coach, use <b>Coach review</b>: print it or save it as PDF, or download the CSV. It lists every entry with the original, relabeled and converted time and a box to tick.</li>
       </ol>
+      <p><b>Meet in two pools</b> (some events long course, some short course): tick <b>Different course for some events</b> and set each event to LCM or SCM. The course chosen at the top is the default for the other events and for the meet course in the file. Custom factors are then asked for each target course.</p>
       <p><b>Relabel only</b> changes the course letter and nothing else. A short course time relabeled as long course is still a short course swim, usually faster than the swimmer would go in a 50 m pool. Use it only when the meet host accepts that, or when the course code itself was wrong.</p>
       <p><b>Standard conversion</b> uses the Swim England equivalent-time formula. It models the speed gained from each turn, with a separate turn factor for each stroke and distance, plus a yards-to-meters measure for SCY times. Results are rounded to the hundredth. Events without a published factor (25s, 100 IM) and yard seeds on 400/800 free are skipped and listed. Relays are converted leg by leg, assuming four equal splits.</p>
       <p><b>Custom factor</b> multiplies each time by the factor you enter for its source course, then adds the seconds-per-100 offset scaled to the distance. The defaults are common rules of thumb: +2% for SCM to LCM, ×1.11 for SCY to SCM.</p>
