@@ -66,8 +66,7 @@ function renderStats(){
     Object.entries(ev).sort((a, b) => a[1].s - b[1].s || a[1].d - b[1].d)
       .map(([n, e]) => `<tr><td>${esc(n)}</td>${ORDER.map(c => `<td class="n${e.c[c] ? "" : " zero"}">${e.c[c] || 0}</td>`).join("")}</tr>`).join("") + "</tbody>";
 
-  const odd = its.filter(i => !i.relay && i.secs != null && i.dist > 0)
-    .filter(i => { const pace = i.secs / (i.dist / 100); return pace > 240 || pace < 40; });
+  const odd = its.filter(X.isUnusual);
   $("oddBox").innerHTML = odd.length ? `<div class="note"><b>Check ${odd.length} unusual time${odd.length > 1 ? "s" : ""}</b><span class="small">Pace is slower than 4:00 or faster than 0:40 per 100. Usually a typo in TeamUnify.</span>` +
     odd.map(i => `<span class="small"><span class="mono">line ${i.li + 1}</span> · ${esc(i.who)} · ${esc(i.event)} · ${FIELDS[i.fi]} <span class="mono">${esc(i.raw.trim())}</span> ${chip(i.course)}</span>`).join("") + `</div>` : "";
 }
@@ -112,23 +111,26 @@ function renderSrc(){
 }
 
 function renderCustom(){
-  const box = $("customBox");
-  box.hidden = methodNow() !== "custom";
+  const box = $("customBox"), m = methodNow();
+  $("fallbackRow").hidden = m !== "standard";
+  box.hidden = !(m === "custom" || (m === "standard" && $("fFallback").checked));
   const defaults = {LCM:{SCM:1.02, SCY:1.13}, SCM:{LCM:0.98, SCY:1.11}};
-  box.querySelectorAll("input[data-src]").forEach(x => state.facPrev[x.id] = x.value);   // kept across target switches
-  const prevOff = ($("cOffset") || {}).value;
-  box.innerHTML = targetsUsed().flatMap(tgt => ["SCM","SCY","LCM"].filter(c => c !== tgt).map(s => {
+  box.querySelectorAll("input").forEach(x => state.facPrev[x.id] = x.value);   // kept across target switches
+  const tgts = targetsUsed();
+  box.innerHTML = tgts.flatMap(tgt => ["SCM","SCY","LCM"].filter(c => c !== tgt).map(s => {
     const id = `fac${s}to${tgt}`, v = state.facPrev[id] ?? defaults[tgt][s];
     return `<div class="field"><label class="k" for="${id}">${s} → ${tgt} factor</label><input id="${id}" data-src="${s}" data-tgt="${tgt}" type="number" step="0.001" min="0.5" max="2" value="${v}"></div>`;
-  })).join("") + `<div class="field"><label class="k" for="cOffset">Add seconds per 100</label><input id="cOffset" type="number" step="0.01" value="${prevOff ?? 0}"></div>`;
+  }).concat(`<div class="field"><label class="k" for="cOff${tgt}">Add seconds per 100${tgts.length > 1 ? ` → ${tgt}` : ""}</label>` +
+    `<input id="cOff${tgt}" data-off="${tgt}" type="number" step="0.01" value="${state.facPrev[`cOff${tgt}`] ?? 0}"></div>`)).join("");
 }
 
 function opts(){
   const srcs = {}; document.querySelectorAll("#srcChecks input").forEach(x => srcs[x.value] = x.checked);
   const fac = {}; document.querySelectorAll("#customBox input[data-src]").forEach(x => (fac[x.dataset.tgt] ||= {})[x.dataset.src] = parseFloat(x.value));
+  const off = {}; document.querySelectorAll("#customBox input[data-off]").forEach(x => off[x.dataset.off] = parseFloat(x.value) || 0);
   return {...tgtOpts(), method:methodNow(),
     fields:[$("fSeed").checked, $("fPrelim").checked, $("fSwimoff").checked, $("fFinals").checked],
-    srcs, fac, off:parseFloat(($("cOffset") || {}).value) || 0, relays:$("fRelay").checked, meet:$("fMeet").checked};
+    srcs, fac, off, fallback:$("fFallback").checked, relays:$("fRelay").checked, meet:$("fMeet").checked};
 }
 
 /* ---------- step 4: preview ---------- */
@@ -150,6 +152,9 @@ function renderPreview(){
       : o.tgt === "LCM"
       ? "Short course times labeled LCM will usually seed swimmers faster than they swim in a 50 m pool."
       : "Long course times labeled SCM will usually seed swimmers slower than their short course ability."}</span></div>`;
+  const fb = p.changes.filter(c => c.how === "fallback").length;
+  if (fb)
+    w += `<div class="note info"><span class="small">${fb} time${fb > 1 ? "s" : ""} with no standard conversion converted with your custom factor (marked <i>custom</i>).</span></div>`;
   if (p.skipped.length)
     w += `<div class="note"><b>${p.skipped.length} skipped, left unchanged</b>` +
       p.skipped.map(s => `<span class="small"><span class="mono">line ${s.it.li + 1}</span> · ${esc(s.it.who)} · ${esc(s.it.event)} · ${FIELDS[s.it.fi]}: ${esc(s.why)}</span>`).join("") + `</div>`;
@@ -158,7 +163,7 @@ function renderPreview(){
     (p.changes.length ? p.changes.map(c => {
       const d = (c.it.secs != null && c.newSecs != null) ? c.newSecs - c.it.secs : 0;
       return `<tr><td class="n mono">${c.it.li + 1}</td><td>${esc(c.it.who)}</td><td>${esc(c.it.event)}</td><td>${FIELDS[c.it.fi]}</td>` +
-        `<td class="t">${esc(c.it.raw.trim() || "–")}</td><td>${chip(c.it.course)}</td><td class="t">${esc(c.newRaw.trim() || "–")}</td><td>${chip(c.tgt)}</td>` +
+        `<td class="t">${esc(c.it.raw.trim() || "–")}</td><td>${chip(c.it.course)}</td><td class="t">${esc(c.newRaw.trim() || "–")}</td><td>${chip(c.tgt)}${c.how === "fallback" ? ` <span class="small muted">custom</span>` : ""}</td>` +
         `<td class="t ${d > 0 ? "delta-up" : d < 0 ? "delta-down" : "zero"}">${d ? (d > 0 ? "+" : "") + d.toFixed(2) : "0.00"}</td></tr>`;
     }).join("") : `<tr><td colspan="9" class="muted">Nothing to change with these options.</td></tr>`) + "</tbody>";
   const base = state.name.replace(/\.[^.]+$/, "") || "converted", ext = (state.name.match(/\.[^.]+$/) || [".sd3"])[0];
@@ -171,12 +176,16 @@ function renderPreview(){
 /* ---------- step 5: coach review report ---------- */
 let lastReview = null;
 const nowStamp = () => new Date().toLocaleString(undefined, {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
-function methodText(rv){
-  if (rv.method === "custom")
-    return "Custom: " + Object.entries(rv.fac).flatMap(([t, by]) => Object.entries(by).filter(([, f]) => f > 0)
+function customText(rv){
+  const one = Object.keys(rv.fac).length < 2;
+  return Object.entries(rv.fac).flatMap(([t, by]) => Object.entries(by).filter(([, f]) => f > 0)
       .map(([c, f]) => `${c} → ${t} × ${f}`)).join(", ") +
-      (rv.off ? `, ${rv.off > 0 ? "+" : ""}${rv.off} s per 100` : "");
-  return "Standard: Swim England equivalent-time formula";
+    Object.entries(rv.off).map(([t, v]) => `, ${v > 0 ? "+" : ""}${v} s per 100${one ? "" : ` (→ ${t})`}`).join("");
+}
+function methodText(rv){
+  if (rv.method === "custom") return "Custom: " + customText(rv) + ", rounded to 0.01 s";
+  return "Standard: Swim England equivalent-time formula, rounded to 0.1 s" +
+    (rv.fallback ? `; events without one: custom ${customText(rv)}` : "");
 }
 const tcell = (t, strong) => t ? `<span class="${strong ? "rt strong" : "rt"}">${esc(t.time)}</span> <span class="rc">${esc(t.course)}</span>` : `<span class="rt muted">–</span>`;
 /* "LCM", or for a two-pool meet "LCM, except SCM: 50 Free, 100 Breast". */
@@ -199,7 +208,7 @@ function renderReport(o){
     ["Prepared", esc(nowStamp())]
   ].map(([a, b]) => `<div><span class="k">${a}</span> ${b}</div>`).join("");
   const summary = [[k.total, "entries"], [k.change, rv.mixed ? "to change course" : `to change to ${rv.tgt}`], [k.same, rv.mixed ? "already on their course" : `already ${rv.tgt}`], [k.nt, "no time"],
-    [k.skipped, "no standard conversion"], [k.excluded, "not selected"], [k.unusual, "to check"]]
+    [k.fallback, "by custom factor"], [k.skipped, "no standard conversion"], [k.excluded, "not selected"], [k.unusual, "to check"]]
     .filter(([n], i) => i < 2 || n).map(([n, t]) => `<b>${n}</b> ${t}`).join(" · ");
   let body = "", group = null;
   for (const r of rv.rows) {
@@ -223,7 +232,7 @@ function renderReport(o){
       `<th class="n">Original</th><th class="n">Relabeled</th><th class="n">Converted</th><th class="n">Change s</th><th>Note</th></tr></thead><tbody>${body}</tbody></table></div>`
       : `<p class="muted">No entries in the selected time fields.</p>`) +
     `<p class="rep-legend small muted">Original: as exported. Relabeled: same time, course code changed to ${esc(rv.mixed ? "the event's course" : rv.tgt)}. ` +
-    `Converted: ${esc(methodText(rv))}, rounded to the hundredth. Tick OK for each entry you approve.</p>` +
+    `Converted: ${esc(methodText(rv))}. Tick OK for each entry you approve.</p>` +
     `<div class="rep-sign"><span>Reviewed by</span><span>Date</span><span>Signature</span></div>`;
   const base = state.name.replace(/\.[^.]+$/, "") || "entries";
   state.repBase = `${base}_review_${rv.mixed ? "mixed" : rv.tgt}`;
@@ -266,7 +275,7 @@ document.addEventListener("drop", e => {
   e.preventDefault(); drop.classList.remove("over");
   const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) readFile(f);
 });
-const RESHAPE = "input[name=tgt],input[name=method],#mixed,input[data-ev]";   // these change which controls are shown
+const RESHAPE = "input[name=tgt],input[name=method],#mixed,#fFallback,input[data-ev]";   // these change which controls are shown
 $("s3").addEventListener("input", e => { if (!e.target.matches(RESHAPE)) renderPreview(); });
 $("s3").addEventListener("change", e => {
   if (e.target.matches("input[data-ev]")) state.perEvent[e.target.dataset.ev] = e.target.value;

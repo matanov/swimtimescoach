@@ -198,11 +198,16 @@ It's a page of the website only, not part of the downloadable one-file app.
      only when the meet host accepts it or the code itself was wrong.
    - **Standard conversion:** the Swim England equivalent-time formula, with a
      turn factor for each stroke and distance and a yards-to-metres measure
-     for SCY times. 100 IM, 25s and yard seeds on 400/800 free have no
-     standard conversion and are skipped and listed. Relays are converted leg
-     by leg, assuming four equal splits.
+     for SCY times. Results are rounded to the nearest 0.1 s like the official
+     algorithm, so they match the Swim England converter. 100 IM and 25s have
+     no standard conversion and are skipped and listed, unless you tick **Use
+     the custom factor for events without a standard conversion** (those
+     times are then marked *custom*). Yard seeds on 400/800 free and
+     yard-only distances (500, 1000, 1650) are always skipped. Relays are
+     converted leg by leg, assuming four equal splits.
    - **Custom factor:** your own multiplier for each source course, plus
-     optional seconds per 100.
+     optional seconds per 100 (one value for each target course), rounded to
+     the hundredth.
    - **Meet in two pools** (some events long course, some short course): tick
      **Different course for some events** and set each event to LCM or SCM.
      The course chosen at the top is the default for every other event and

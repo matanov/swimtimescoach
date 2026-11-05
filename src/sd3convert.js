@@ -94,23 +94,40 @@ function fromT50(T50, tgt, dist, stroke){
   const pm = tgt === "SCY" ? PMY[k] : 1, d1 = (tgt === "SCY" && dist === 1500) ? 1650 : dist;
   return T50 * pm - tf / T50 * (dist / 100) * (d1 / 100) * 2;
 }
-function standard(T, src, tgt, dist, stroke){
-  if (!TF[`${dist}${stroke}`]) return {err:`no standard factor for ${dist} ${STROKE[stroke] || "event"}`};
+/* The official result is rounded to the nearest 0.1 s: floor((t + 0.05) × 10) / 10
+   (British Swimming / Sportsystems algorithm). The epsilon guards float error. */
+const tenth = t => Math.floor((t + 0.05) * 10 + 1e-9) / 10;
+/* Unrounded equivalent time, or {err} when the formula has no answer. */
+function equiv(T, src, tgt, dist, stroke){
+  if (!TF[`${dist}${stroke}`]) return {err:`no standard factor for ${dist} ${STROKE[stroke] || "event"}`, noFactor:true};
   if ((src === "SCY" || tgt === "SCY") && stroke === "1" && (dist === 400 || dist === 800))
     return {err:"yard seed for 400/800 free is ambiguous (500/1000 yd)"};
-  return {t: fromT50(toT50(T, src, dist, stroke), tgt, dist, stroke)};
+  return {raw: fromT50(toT50(T, src, dist, stroke), tgt, dist, stroke)};
 }
-/* Relays: four equal splits, each leg converted with its own stroke. */
+function standard(T, src, tgt, dist, stroke){
+  const r = equiv(T, src, tgt, dist, stroke);
+  return r.err ? r : {t: tenth(r.raw), raw: r.raw};
+}
+/* Relays: four equal splits, each leg converted with its own stroke; the
+   legs' unrounded times are added, then rounded like an individual time. */
 function standardRelay(T, src, tgt, dist, stroke){
   const legs = stroke === "6" ? ["1","1","1","1"] : stroke === "7" ? ["2","3","4","1"] : null;
   if (!legs) return {err:"unknown relay stroke"};
   let sum = 0;
   for (const ls of legs) {
-    const r = standard(T / 4, src, tgt, dist / 4, ls);
-    if (r.err) return {err:`relay leg: ${r.err}`};
-    sum += r.t;
+    const r = equiv(T / 4, src, tgt, dist / 4, ls);
+    if (r.err) return {err:`relay leg: ${r.err}`, noFactor:r.noFactor};
+    sum += r.raw;
   }
-  return {t:sum};
+  return {t: tenth(sum), raw: sum};
+}
+/* Yard-only distances (500 / 1000 / 1650 free) have no metre event to become. */
+const yardOnly = it => it.course === "SCY" && it.stroke === "1" && [500, 1000, 1650].includes(it.dist);
+/* Custom method: factor per target then source course, plus seconds per 100 per target. */
+function customTime(it, tgt, o){
+  const f = ((o.fac || {})[tgt] || {})[it.course];
+  if (!(f > 0)) return {err:`no valid factor for ${it.course} to ${tgt}`};
+  return {t: it.secs * f + ((o.off || {})[tgt] || 0) * (it.dist / 100)};
 }
 
 /* Event key: distance + stroke code, e.g. "1001" = 100 Free, "2006" = 200 Free Relay. */
@@ -137,30 +154,37 @@ function events(parsed){
         perEvent:{"501":"SCM",...} (optional, two-pool meets; others use tgt),
         fields:[seed,prelim,swimoff,finals], srcs:{SCM:true,...},
         fac:{LCM:{SCM:1.02,SCY:1.13}, SCM:{...}} (per target, then source course),
-        off:secondsPer100, relays:bool, meet:bool} */
+        off:{LCM:secondsPer100, SCM:...} (per target),
+        fallback:bool (standard: use the custom factor for events without a standard factor),
+        relays:bool, meet:bool} */
 function plan(parsed, o){
   const changes = [], skipped = [];
   for (const it of parsed.items) {
     if (!o.fields[it.fi] || (it.relay && !o.relays)) continue;
     const tgt = targetOf(it, o);
     if (!CODE[it.course] || it.course === tgt || !o.srcs[it.course]) continue;
-    let newSecs = it.secs, newRaw = it.raw;
+    let newSecs = it.secs, newRaw = it.raw, how = o.method;
     if (it.secs != null && o.method !== "relabel") {
       if (o.method === "standard") {
         const r = (it.relay ? standardRelay : standard)(it.secs, it.course, tgt, it.dist, it.stroke);
-        if (r.err) { skipped.push({it, why:r.err}); continue; }
-        newSecs = r.t;
+        if (r.err && r.noFactor && o.fallback && !yardOnly(it)) {
+          const c = customTime(it, tgt, o);
+          if (c.err) { skipped.push({it, why:`${r.err}; ${c.err}`}); continue; }
+          newSecs = c.t; how = "fallback";
+        }
+        else if (r.err) { skipped.push({it, why:r.err}); continue; }
+        else newSecs = r.t;
       } else {
-        const f = ((o.fac || {})[tgt] || {})[it.course];
-        if (!(f > 0)) { skipped.push({it, why:`no valid factor for ${it.course} to ${tgt}`}); continue; }
-        newSecs = it.secs * f + (o.off || 0) * (it.dist / 100);
+        const c = customTime(it, tgt, o);
+        if (c.err) { skipped.push({it, why:c.err}); continue; }
+        newSecs = c.t;
       }
       newSecs = Math.round(newSecs * 100) / 100;
       const t = fmtTime(newSecs);
       if (t.length > 8) { skipped.push({it, why:"converted time does not fit the 8-character field"}); continue; }
       newRaw = t.padStart(8, " ");
     }
-    changes.push({it, tgt, newSecs, newRaw, newCode: CODE[tgt][/[0-9]/.test(it.codeChar) ? 0 : 1]});
+    changes.push({it, tgt, how, newSecs, newRaw, newCode: CODE[tgt][/[0-9]/.test(it.codeChar) ? 0 : 1]});
   }
   const m = parsed.meet; let meetChange = null;
   if (o.meet && m && m.course && m.course !== o.tgt && m.courseLine != null)
@@ -221,9 +245,10 @@ function review(parsed, o){
     if (status === "nt") notes.push("no time");
     if (status === "excluded") notes.push("not converted (course not selected)");
     if (skip) notes.push(`no conversion: ${skip}`);
+    if (c && c.how === "fallback") notes.push("custom factor: no standard conversion");
     if (isUnusual(it)) notes.push("check time: unusual pace");
     return {line: it.li + 1, who: it.who, age: it.age, sex: it.sex, relay: it.relay, event: it.event,
-            field: FIELDS[it.fi], tgt, orig, relabeled, converted, delta, status, unusual: isUnusual(it), note: notes.join("; ")};
+            field: FIELDS[it.fi], tgt, fallback: !!(c && c.how === "fallback"), orig, relabeled, converted, delta, status, unusual: isUnusual(it), note: notes.join("; ")};
   });
   // Swimmers A–Z by "Last, First"; each swimmer's events by stroke, distance, field; relays last.
   const byName = (a, b) => a.localeCompare(b, undefined, {sensitivity:"base"});
@@ -238,9 +263,12 @@ function review(parsed, o){
   const other = events(parsed).filter(e => targetOf(e, o) !== o.tgt).map(e => ({event:e.event, tgt:targetOf(e, o)}));
   const used = new Set([o.tgt, ...other.map(e => e.tgt)]);
   return {rows, tgt: o.tgt, mixed: other.length > 0, other, method: convMethod,
-          fac: Object.fromEntries(Object.entries(o.fac || {}).filter(([t]) => used.has(t))), off: o.off || 0, meetChange: !!rel.meetChange,
+          fallback: convMethod === "standard" && !!o.fallback,
+          fac: Object.fromEntries(Object.entries(o.fac || {}).filter(([t]) => used.has(t))),
+          off: Object.fromEntries(Object.entries(o.off || {}).filter(([t, v]) => used.has(t) && v)), meetChange: !!rel.meetChange,
           counts: {total: rows.length, change: count("change"), same: count("same"), nt: count("nt"),
-                   skipped: count("skipped"), excluded: count("excluded"), unusual: rows.filter(r => r.unusual).length}};
+                   skipped: count("skipped"), excluded: count("excluded"), unusual: rows.filter(r => r.unusual).length,
+                   fallback: rows.filter(r => r.fallback).length}};
 }
 
 /* Review as CSV (UTF-8, comma separated, quoted where needed). */
@@ -284,7 +312,7 @@ function sampleText(){
   ].join("\r\n") + "\r\n";
 }
 
-const api = {parse, plan, build, review, reviewCSV, events, evKey, targetOf, isUnusual, standard, standardRelay, parseTime, fmtTime, sampleText,
+const api = {parse, plan, build, review, reviewCSV, events, evKey, targetOf, isUnusual, standard, standardRelay, tenth, parseTime, fmtTime, sampleText,
              COURSE, CODE, STROKE, FIELDS, TF};
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 else root.SD3Convert = api;

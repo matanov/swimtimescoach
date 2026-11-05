@@ -81,10 +81,11 @@
         <label class="opt"><input type="radio" name="method" id="mRelabel" value="relabel" checked><b>Relabel only</b>
           <span class="d">Keep every time exactly as is. Only the course code changes.</span></label>
         <label class="opt"><input type="radio" name="method" id="mStd" value="standard"><b>Standard conversion</b>
-          <span class="d">Swim England equivalent-time formula, per stroke and distance, accounting for turns.</span></label>
+          <span class="d">Swim England equivalent-time formula, per stroke and distance, accounting for turns. Rounded to 0.1 s.</span></label>
         <label class="opt"><input type="radio" name="method" id="mCustom" value="custom"><b>Custom factor</b>
           <span class="d">Multiply by your own factor per source course, plus optional seconds per 100.</span></label>
       </div>
+      <div class="checks" id="fallbackRow" hidden><label><input type="checkbox" id="fFallback"> Use the custom factor for events without a standard conversion <span class="muted small">(25s, 100 IM)</span></label></div>
     </div>
     <div class="custom" id="customBox" hidden></div>
     <div class="field">
@@ -142,8 +143,8 @@
       </ol>
       <p><b>Meet in two pools</b> (some events long course, some short course): tick <b>Different course for some events</b> and set each event to LCM or SCM. The course chosen at the top is the default for the other events and for the meet course in the file. Custom factors are then asked for each target course.</p>
       <p><b>Relabel only</b> changes the course letter and nothing else. A short course time relabeled as long course is still a short course swim, usually faster than the swimmer would go in a 50 m pool. Use it only when the meet host accepts that, or when the course code itself was wrong.</p>
-      <p><b>Standard conversion</b> uses the Swim England equivalent-time formula. It models the speed gained from each turn, with a separate turn factor for each stroke and distance, plus a yards-to-meters measure for SCY times. Results are rounded to the hundredth. Events without a published factor (25s, 100 IM) and yard seeds on 400/800 free are skipped and listed. Relays are converted leg by leg, assuming four equal splits.</p>
-      <p><b>Custom factor</b> multiplies each time by the factor you enter for its source course, then adds the seconds-per-100 offset scaled to the distance. The defaults are common rules of thumb: +2% for SCM to LCM, ×1.11 for SCY to SCM.</p>
+      <p><b>Standard conversion</b> uses the Swim England equivalent-time formula. It models the speed gained from each turn, with a separate turn factor for each stroke and distance, plus a yards-to-meters measure for SCY times. Results are rounded to the nearest 0.1 s, as in the official algorithm, so they match the Swim England converter. Events without a published factor (25s, 100 IM) are skipped and listed, unless you tick <b>Use the custom factor for events without a standard conversion</b>: those times then get your custom factor and are marked <i>custom</i>. Yard seeds on 400/800 free and yard-only distances (500, 1000, 1650) are always skipped. Relays are converted leg by leg, assuming four equal splits.</p>
+      <p><b>Custom factor</b> multiplies each time by the factor you enter for its source course, then adds the seconds-per-100 offset scaled to the distance (a separate offset for each target course in a two-pool meet). Results are rounded to the hundredth. The defaults are common rules of thumb: +2% for SCM to LCM, ×1.11 for SCY to SCM.</p>
       <p>Only the 8-character time fields and their course codes are rewritten. Every other byte, line length and line ending is kept, so the file stays valid SDIF.</p>
     </div>
   </details>

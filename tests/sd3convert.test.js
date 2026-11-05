@@ -50,13 +50,12 @@ test("code style is kept: digit codes stay digits", () => {
 });
 
 test("standard conversion: SCM and LCM are inverses, values are sensible", () => {
-  const lcm = X.standard(60, "LCM", "SCM", 100, "1").t;
-  assert.ok(Math.abs(lcm - 58.59) < 0.01, lcm);
-  assert.ok(Math.abs(X.standard(lcm, "SCM", "LCM", 100, "1").t - 60) < 1e-9);
+  const lcm = X.standard(60, "LCM", "SCM", 100, "1");
+  assert.equal(lcm.t, 58.6);
+  assert.ok(Math.abs(X.standard(lcm.raw, "SCM", "LCM", 100, "1").raw - 60) < 1e-9);
   const back = X.standard(150, "SCM", "LCM", 200, "2").t;
   assert.ok(back > 150 && back < 154, back);
-  const yd = X.standard(50, "SCY", "LCM", 100, "1").t;          // 50.00 y -> ~56.5 LCM
-  assert.ok(Math.abs(yd - 56.53) < 0.01, yd);
+  assert.equal(X.standard(50, "SCY", "LCM", 100, "1").t, 56.5);   // 50.00 y -> 56.5 LCM
 });
 
 test("standard conversion skips events without a factor and ambiguous yard distances", () => {
@@ -70,7 +69,7 @@ test("standard conversion skips events without a factor and ambiguous yard dista
 });
 
 test("custom factor multiplies and adds seconds per 100", () => {
-  const plan = X.plan(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{LCM:{SCM:1.02, SCY:1.13}}, off:0.5});
+  const plan = X.plan(sample(), {...ALL, tgt:"LCM", method:"custom", fac:{LCM:{SCM:1.02, SCY:1.13}}, off:{LCM:0.5, SCM:-9}});
   const c = plan.changes.find(c => c.it.raw.trim() === "29.84");
   assert.equal(c.newSecs, Math.round((29.84 * 1.02 + 0.25) * 100) / 100);
   assert.equal(c.newRaw, "   30.69");
@@ -117,7 +116,7 @@ test("review lists every entry with original, relabeled and converted times", ()
   assert.equal(im.relabeled.course, "LCM");
   const odd = rv.rows.find(r => r.who === "Moretti, Anna V");
   assert.ok(odd.unusual); assert.match(odd.note, /check time/);
-  assert.deepEqual(rv.counts, {total:14, change:9, same:3, nt:0, skipped:2, excluded:0, unusual:1});
+  assert.deepEqual(rv.counts, {total:14, change:9, same:3, nt:0, skipped:2, excluded:0, unusual:1, fallback:0});
 });
 
 test("review uses custom factors when chosen and marks unselected courses", () => {
@@ -192,4 +191,54 @@ test("two-pool meet: custom factors per target, review and CSV show each target"
   assert.match(X.reviewCSV(rv), /,100 Back,Seed,LCM,1:09\.55,SCM,1:09\.55,LCM,/);
   assert.equal(X.review(sample(), {...o, perEvent:{"1002":"SCM"}}).mixed, false);
   assert.match(X.plan(sample(), {...o, fac:{SCM:{LCM:0.98}}}).skipped[0].why, /no valid factor for SCY to SCM/);
+});
+
+// Expected values from a line-for-line port of the British Swimming / Sportsystems
+// algorithm in github.com/Chester-le-Street-ASC/EquivalentTime (EquivalentTime.php):
+// result = floor((t + 0.05) * 10) / 10. The port matched our formula in 3,600 cases.
+test("standard conversion matches the reference implementation, rounded to 0.1 s", () => {
+  for (const [t, src, tgt, dist, stroke, want] of [
+    [60, "SCM", "LCM", 100, "1", 61.4], [60, "LCM", "SCM", 100, "1", 58.6], [52, "SCY", "LCM", 100, "1", 58.7],
+    [160, "SCM", "LCM", 200, "3", 163.3], [150.55, "LCM", "SCM", 200, "5", 147.9], [1124.1, "SCM", "LCM", 1500, "1", 1142.3],
+    [310.2, "LCM", "SCY", 400, "5", 276.7], [125.33, "SCY", "SCM", 200, "4", 137.7]])
+    assert.equal(X.standard(t, src, tgt, dist, stroke).t, want, `${t} ${src}->${tgt} ${dist}/${stroke}`);
+  assert.equal(X.tenth(61.35), 61.4); assert.equal(X.tenth(61.34999), 61.3); assert.equal(X.tenth(58.6), 58.6);
+  const p = X.plan(sample(), {...ALL, tgt:"LCM", method:"standard"});
+  assert.ok(p.changes.every(c => Math.abs(c.newSecs * 10 - Math.round(c.newSecs * 10)) < 1e-9), "tenths only");
+  assert.ok(p.changes.every(c => /0$/.test(c.newRaw)));
+  const r = X.standardRelay(118.2, "SCM", "LCM", 200, "6");          // legs added unrounded, then rounded once
+  assert.equal(r.t, X.tenth(r.raw));
+});
+
+test("standard with custom fallback converts events without a standard factor", () => {
+  const o = {...ALL, tgt:"LCM", method:"standard", fallback:true, fac:{LCM:{SCM:1.02, SCY:1.13}}, off:{LCM:0.1}};
+  const p = X.plan(sample(), o);
+  const im = p.changes.find(c => c.it.event === "100 IM");
+  assert.equal(im.how, "fallback");
+  assert.equal(im.newSecs, Math.round((72.30 * 1.02 + 0.1) * 100) / 100);
+  assert.deepEqual(p.skipped.map(s => s.it.event), ["400 Free"]);      // yard 400 stays ambiguous, not a missing factor
+  assert.equal(p.changes.find(c => c.it.event === "100 Fly").how, "standard");
+  const rv = X.review(sample(), o);
+  const row = rv.rows.find(r => r.event === "100 IM");
+  assert.deepEqual([row.status, row.fallback], ["change", true]); assert.match(row.note, /custom factor/);
+  assert.equal(rv.counts.fallback, 1); assert.ok(rv.fallback);
+  // without the fallback, or with no factor for that course, it is skipped
+  assert.ok(X.plan(sample(), {...o, fallback:false}).skipped.some(s => s.it.event === "100 IM"));
+  assert.match(X.plan(sample(), {...o, fac:{}}).skipped.find(s => s.it.event === "100 IM").why, /no standard factor.*no valid factor/);
+  // yard-only distances never fall back: there is no metre event of that length
+  const y = X.parse(X.sampleText().replace(/( 400)(1)(  1 1314[^\r]*5:02\.90)Y/, " 5001$3Y"));
+  assert.match(X.plan(y, o).skipped.find(s => s.it.dist === 500).why, /no standard factor for 500 Free/);
+});
+
+test("custom seconds per 100 are set per target course", () => {
+  const o = {...ALL, tgt:"SCM", method:"custom", perEvent:{"1001":"LCM"},
+    fac:{SCM:{LCM:1, SCY:1}, LCM:{SCM:1, SCY:1}}, off:{LCM:1, SCM:-0.5}};
+  const p = X.plan(sample(), o);
+  const toSCM = p.changes.find(c => c.it.event === "200 Back");        // 2:31.02 LCM, 200 m: −1.00
+  assert.equal(toSCM.newSecs, 151.02 - 1);
+  const toLCM = p.changes.find(c => c.it.event === "100 Free");
+  assert.equal(toLCM, undefined);                                      // already LCM
+  const rv = X.review(sample(), {...o, perEvent:{"501":"LCM"}});
+  assert.equal(rv.rows.find(r => r.event === "50 Free").converted.time, "30.34");   // 29.84 + 0.5 × 1
+  assert.deepEqual(rv.off, {LCM:1, SCM:-0.5});
 });
